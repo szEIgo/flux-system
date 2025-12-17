@@ -9,5 +9,7 @@ resources:
   - storage-class.yaml
   - cert-manager-helmrelease.yaml
   - ingress-nginx-helmrelease.yaml
-  #- cert-manager-clusterissuers.yaml
+  - coredns-configmap.yaml
+   - metallb-helmrelease.yaml
+   - metallb-config.yaml
 
