@@ -8,4 +8,5 @@ resources:
   - namespaces.yaml
   - storage-class.yaml
   - cert-manager-helmrelease.yaml
+  - cert-manager-clusterissuers.yaml
   - ingress-nginx-helmrelease.yaml
