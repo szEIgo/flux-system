@@ -1,5 +1,19 @@
-# Example content for all new kustomization.yaml files
+# k8s/apps/home/kustomization.yaml
+# Application deployments for your home environment
+
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+# Organize by functional areas
 resources: []
+  # Once you add applications, uncomment and add:
+  # - ./example-app/deployment.yaml
+  # - ./example-app/service.yaml
+  # - ./example-app/ingress.yaml
+
+# Common configurations shared across apps
+commonLabels:
+  app.kubernetes.io/managed-by: flux
+
+commonAnnotations:
+  description: "Migrated from podman containers"

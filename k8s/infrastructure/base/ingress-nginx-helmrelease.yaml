@@ -1,0 +1,49 @@
+---
+# Ingress-Nginx Helm Release
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ingress-nginx
+  namespace: ingress-nginx
+spec:
+  interval: 1h0m0s
+  chart:
+    spec:
+      chart: ingress-nginx
+      version: ">=4.9.0"
+      sourceRef:
+        kind: HelmRepository
+        name: ingress-nginx
+        namespace: ingress-nginx
+  values:
+    controller:
+      # For k3s on NixOS, typically use servicetype LoadBalancer or NodePort
+      service:
+        type: LoadBalancer
+        # If using MetalLB or local IP, this will work
+        externalTrafficPolicy: Local
+      # Enable metrics for monitoring
+      metrics:
+        enabled: true
+      # Resources - adjust based on your server
+      resources:
+        requests:
+          cpu: 100m
+          memory: 90Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+      # Add any custom headers or configs here
+      config:
+        use-forwarded-headers: "true"
+        use-proxy-protocol: "false"
+---
+# HelmRepository for ingress-nginx
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: ingress-nginx
+  namespace: ingress-nginx
+spec:
+  interval: 24h
+  url: https://kubernetes.github.io/ingress-nginx

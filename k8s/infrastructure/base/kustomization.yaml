@@ -3,5 +3,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# No resources yet, but this file ensures the directory is valid Kustomize content
-resources: []
+# Core infrastructure components
+resources:
+  - namespaces.yaml
+  - storage-class.yaml
+  - cert-manager-helmrelease.yaml
+  - ingress-nginx-helmrelease.yaml
