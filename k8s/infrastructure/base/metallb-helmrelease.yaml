@@ -6,6 +6,10 @@ metadata:
   namespace: metallb-system
 spec:
   interval: 1h0m0s
+  install:
+    crds: Create
+  upgrade:
+    crds: Create
   chart:
     spec:
       chart: metallb

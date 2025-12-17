@@ -11,5 +11,4 @@ resources:
   - ingress-nginx-helmrelease.yaml
   - coredns-configmap.yaml
   - metallb-helmrelease.yaml
-  - metallb-config.yaml
 
