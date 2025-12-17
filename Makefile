@@ -1,84 +1,194 @@
-.PHONY: up down sops reconcile status logs clean help
+.PHONY: help init up add-secret add-gh-pat rotate-keys reconcile status logs down clean
 
 GITHUB_OWNER := szeigo
 GITHUB_REPO := flux-system
 GITHUB_BRANCH := main
 FLUX_PATH := ./k8s/clusters/home
 AGE_KEY := $(HOME)/.config/sops/keys/age.key
+GITHUB_TOKEN_FILE := .secrets/github-pat.sops.yaml
 
 help:
-	@echo "Flux GitOps with SOPS Makefile"
+	@echo "Flux GitOps with SOPS"
 	@echo ""
 	@echo "Usage:"
-	@echo "  make up         - Bootstrap Flux from GitHub"
-	@echo "  make sops       - Setup SOPS decryption (run after 'make up')"
-	@echo "  make reconcile  - Force Flux reconciliation"
-	@echo "  make status     - Check Flux status"
-	@echo "  make logs       - Watch Flux logs"
-	@echo "  make down       - Uninstall Flux"
-	@echo "  make clean      - Remove SOPS secret"
-
-up:
-	@echo "=== Bootstrapping Flux from GitHub ==="
-	flux bootstrap github \
-		--owner=$(GITHUB_OWNER) \
-		--repo=$(GITHUB_REPO) \
-		--branch=$(GITHUB_BRANCH) \
-		--path=$(FLUX_PATH) \
-		--personal
+	@echo "  make init          - Ensure age key, create sops-age secret, configure decryption"
+	@echo "  make add-gh-pat    - Store GitHub PAT encrypted at $(GITHUB_TOKEN_FILE)"
+	@echo "  make up            - Bootstrap Flux (uses encrypted GH token if present)"
+	@echo "  make add-secret    - Add a K8s Secret encrypted into k8s/infrastructure/secrets/"
+	@echo "  make rotate-keys   - Rotate age key and re-encrypt all secrets"
+	@echo "  make reconcile     - Force Flux reconciliation"
+	@echo "  make status        - Show Flux status and infra pods"
+	@echo "  make logs          - Tail kustomize-controller logs"
+	@echo "  make down          - Uninstall Flux"
+	@echo "  make clean         - Delete sops-age secret from cluster"
 	@echo ""
-	@echo "✓ Bootstrap complete. Now run: make sops"
+	@echo "Flow: make init -> (optional: make add-gh-pat) -> make up"
 
-sops:
-	@echo "=== Setting up SOPS decryption ==="
+init:
+	@echo "=== Initializing SOPS + cluster decryption ==="
 	@if [ ! -f "$(AGE_KEY)" ]; then \
-		echo "ERROR: Age key not found at $(AGE_KEY)"; \
-		exit 1; \
+		read -p "No age key at $(AGE_KEY). Generate new? (y/n): " gen; \
+		if [ "$$gen" = "y" ]; then \
+			mkdir -p $(dir $(AGE_KEY)); \
+			age-keygen -o $(AGE_KEY); \
+			PUB=$$(age-keygen -y $(AGE_KEY)); \
+			echo "Updating .sops.yaml recipient to $$PUB"; \
+			if command -v yq >/dev/null 2>&1; then \
+				yq -i '.creation_rules[0].age = strenv(PUB)' .sops.yaml; \
+			else \
+				sed -i "s|^\s*-\s*age:.*|- age: $$PUB|" .sops.yaml; \
+			fi; \
+		else \
+			read -p "Path to existing age key file: " keypath; \
+			mkdir -p $(dir $(AGE_KEY)); \
+			cp "$$keypath" "$(AGE_KEY)"; \
+		fi; \
 	fi
-	@echo "Step 1: Creating sops-age secret..."
+	@echo "Creating namespace flux-system (if missing)..."; kubectl create namespace flux-system 2>/dev/null || true
+	@echo "Creating/Updating sops-age secret..."
 	kubectl create secret generic sops-age \
 		--from-file=age.key=$(AGE_KEY) \
 		-n flux-system \
 		--dry-run=client -o yaml | kubectl apply -f -
-	@echo "Step 2: Configuring SOPS provider..."
+	@echo "Patching flux-system Kustomization for SOPS decryption (if exists)..."
+	@kubectl patch kustomization flux-system -n flux-system \
+		--type merge -p '{"spec":{"decryption":{"provider":"sops","secretRef":{"name":"sops-age"}}}}' 2>/dev/null || true
+	@echo "✓ Init complete"
+
+add-gh-pat:
+	@echo "=== Store encrypted GitHub PAT for bootstrap ==="
+	@mkdir -p .secrets
+	@read -sp "GitHub PAT (will be stored encrypted): " token; echo; \
+		echo "github_token: $$token" > /tmp/github-pat.yaml; \
+		sops -e /tmp/github-pat.yaml > $(GITHUB_TOKEN_FILE); \
+		rm -f /tmp/github-pat.yaml; \
+		echo "✓ Encrypted token saved to $(GITHUB_TOKEN_FILE)"; \
+		echo "Next: git add $(GITHUB_TOKEN_FILE) && git commit -m 'Add encrypted GH PAT' && git push"
+
+up:
+	@echo "=== Bootstrapping Flux from GitHub ==="
+	@if ! kubectl -n flux-system get secret sops-age >/dev/null 2>&1; then \
+		echo "ERROR: sops-age secret missing. Run 'make init' first."; \
+		exit 1; \
+	fi
+	@TOKEN=""; if [ -f "$(GITHUB_TOKEN_FILE)" ]; then \
+		TOKEN=$$(sops -d --extract '["github_token"]' $(GITHUB_TOKEN_FILE) 2>/dev/null || true); \
+	fi; \
+	if [ -n "$$TOKEN" ]; then \
+		echo "Using encrypted GitHub token from $(GITHUB_TOKEN_FILE)"; \
+		GITHUB_TOKEN="$$TOKEN" flux bootstrap github \
+			--owner=$(GITHUB_OWNER) \
+			--repository=$(GITHUB_REPO) \
+			--branch=$(GITHUB_BRANCH) \
+			--path=$(FLUX_PATH) \
+			--personal \
+			--token-auth; \
+	else \
+		echo "No encrypted token found; will prompt interactively"; \
+		flux bootstrap github \
+			--owner=$(GITHUB_OWNER) \
+			--repository=$(GITHUB_REPO) \
+			--branch=$(GITHUB_BRANCH) \
+			--path=$(FLUX_PATH) \
+			--personal; \
+	fi
+	@echo "Configuring SOPS decryption on flux-system Kustomization..."
 	kubectl patch kustomization flux-system -n flux-system \
 		--type merge -p '{"spec":{"decryption":{"provider":"sops","secretRef":{"name":"sops-age"}}}}'
-	@echo "Step 3: Patching kustomize-controller to find age key..."
-	kubectl set env deployment/kustomize-controller \
+	@echo "Reconciling..."; flux reconcile kustomization flux-system --with-source
+	@echo "✓ Flux bootstrapped with SOPS"
+
+add-secret:
+	@echo "=== Adding new SOPS-encrypted Kubernetes Secret ===" && \
+	read -p "Secret filename (without .enc.yaml): " name && \
+	read -p "Secret key (e.g., github-token): " key && \
+	read -sp "Secret value: " value && \
+	echo "" && \
+	mkdir -p /tmp/sops-tmp && \
+	cat > /tmp/sops-tmp/$$name.yaml <<-'EOF'
+	apiVersion: v1
+	kind: Secret
+	metadata:
+	  name: REPLACEME
+	  namespace: flux-system
+	type: Opaque
+	stringData:
+	  REPLACEKEY: REPLACEVALUE
+	EOF
+	sed -i "s|REPLACEME|$$name|g" /tmp/sops-tmp/$$name.yaml && \
+	sed -i "s|REPLACEKEY|$$key|g" /tmp/sops-tmp/$$name.yaml && \
+	sed -i "s|REPLACEVALUE|$$value|g" /tmp/sops-tmp/$$name.yaml && \
+	secret_file=k8s/infrastructure/secrets/$$name.enc.yaml; \
+	sops -e /tmp/sops-tmp/$$name.yaml > $$secret_file && \
+	rm -f /tmp/sops-tmp/$$name.yaml && \
+	echo "✓ Created $$secret_file" && \
+	if command -v yq >/dev/null 2>&1; then \
+		RES=$$(yq '.resources[]? // empty' k8s/infrastructure/secrets/kustomization.yaml | grep -Fx "$$secret_file" || true); \
+		if [ -z "$$RES" ]; then \
+			yq -i '.resources += ["'"$$secret_file"'"]' k8s/infrastructure/secrets/kustomization.yaml; \
+			echo "✓ Added to kustomization: $$secret_file"; \
+		else \
+			echo "Already listed in kustomization: $$secret_file"; \
+		fi; \
+	else \
+		if grep -qE '^\s*resources:\s*\[\s*\]' k8s/infrastructure/secrets/kustomization.yaml; then \
+			sed -i 's#^\s*resources:\s*\[\s*\]#resources:\n  - '"$$secret_file"'#' k8s/infrastructure/secrets/kustomization.yaml; \
+		elif grep -qE '^\s*resources:\s*$' k8s/infrastructure/secrets/kustomization.yaml; then \
+			echo '  - '"$$secret_file" >> k8s/infrastructure/secrets/kustomization.yaml; \
+		elif ! grep -q '^resources:' k8s/infrastructure/secrets/kustomization.yaml; then \
+			echo -e '\nresources:\n  - '"$$secret_file" >> k8s/infrastructure/secrets/kustomization.yaml; \
+		else \
+			echo '  - '"$$secret_file" >> k8s/infrastructure/secrets/kustomization.yaml; \
+		fi; \
+	fi && \
+	echo "Next: git add $$secret_file k8s/infrastructure/secrets/kustomization.yaml && git commit -m 'Add $$name secret' && git push"
+
+rotate-keys:
+	@echo "=== Rotating age key and re-encrypting secrets ==="
+	@mkdir -p $(dir $(AGE_KEY)); age-keygen -o $(AGE_KEY).new
+	@NEWPUB=$$(age-keygen -y $(AGE_KEY).new); \
+	if command -v yq >/dev/null 2>&1; then \
+		yq -i '.creation_rules[0].age = strenv(NEWPUB)' .sops.yaml; \
+	else \
+		sed -i "s|^\s*-\s*age:.*|- age: $$NEWPUB|" .sops.yaml; \
+	fi
+	@echo "Re-encrypting k8s/infrastructure/secrets/*.enc.yaml (if any)"
+	@for file in k8s/infrastructure/secrets/*.enc.yaml; do \
+		[ -f "$$file" ] || continue; \
+		sops -d "$$file" > /tmp/secret.tmp; \
+		SOPS_AGE_KEY_FILE=$(AGE_KEY).new sops -e /tmp/secret.tmp > "$$file"; \
+		rm -f /tmp/secret.tmp; \
+	done
+	@echo "Re-encrypting $(GITHUB_TOKEN_FILE) (if present)"
+	@if [ -f "$(GITHUB_TOKEN_FILE)" ]; then \
+		sops -d $(GITHUB_TOKEN_FILE) > /tmp/ghtoken.tmp; \
+		SOPS_AGE_KEY_FILE=$(AGE_KEY).new sops -e /tmp/ghtoken.tmp > $(GITHUB_TOKEN_FILE); \
+		rm -f /tmp/ghtoken.tmp; \
+	fi
+	@mv $(AGE_KEY).new $(AGE_KEY)
+	@echo "Updating cluster sops-age secret..."
+	kubectl create secret generic sops-age \
+		--from-file=age.key=$(AGE_KEY) \
 		-n flux-system \
-		SOPS_AGE_KEY_FILE=/var/secrets/sops/age.key || true
-	kubectl patch deployment kustomize-controller -n flux-system --type json -p='[ \
-		{"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"sops-age","secret":{"secretName":"sops-age"}}}, \
-		{"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"sops-age","mountPath":"/var/secrets/sops","readOnly":true}} \
-	]' || true
-	@echo "Step 4: Reconciling..."
-	flux reconcile kustomization flux-system --with-source
-	@echo "✓ SOPS setup complete"
+		--dry-run=client -o yaml | kubectl apply -f -
+	@echo "Reconciling..."; flux reconcile kustomization flux-system --with-source
+	@echo "✓ Rotation complete. Commit .sops.yaml and any changed secrets."
 
 reconcile:
-	@echo "=== Reconciling Flux ==="
-	flux reconcile kustomization flux-system --with-source
-	@echo "✓ Reconciliation triggered"
+	@echo "=== Reconciling Flux ==="; flux reconcile kustomization flux-system --with-source; echo "✓"
 
 status:
-	@echo "=== Flux Status ==="
-	@flux get kustomization -n flux-system flux-system
-	@echo ""
-	@echo "=== Infrastructure Pods ==="
-	@kubectl get pods -n cert-manager 2>/dev/null || echo "cert-manager: not deployed"
-	@kubectl get pods -n ingress-nginx 2>/dev/null || echo "ingress-nginx: not deployed"
-	@kubectl get pods -n apps 2>/dev/null || echo "apps: namespace exists"
+	@echo "=== Flux Status ==="; flux get kustomization -n flux-system flux-system || true; echo ""; \
+	 echo "=== Infrastructure Pods ==="; \
+	 kubectl get pods -n cert-manager 2>/dev/null || echo "cert-manager: not deployed"; \
+	 kubectl get pods -n ingress-nginx 2>/dev/null || echo "ingress-nginx: not deployed"; \
+	 kubectl get pods -n apps 2>/dev/null || echo "apps: namespace exists"
 
 logs:
-	@echo "=== Flux Logs (kustomize-controller) ==="
-	kubectl logs -n flux-system deployment/kustomize-controller -f --tail=50
+	@echo "=== Flux Logs (kustomize-controller) ==="; kubectl logs -n flux-system deployment/kustomize-controller -f --tail=50
 
 down:
-	@echo "=== Uninstalling Flux ==="
-	flux uninstall --silent
-	@echo "✓ Flux uninstalled"
+	@echo "=== Uninstalling Flux ==="; flux uninstall --silent; echo "✓"
 
 clean:
-	@echo "=== Removing SOPS secret ==="
-	kubectl delete secret sops-age -n flux-system 2>/dev/null || echo "Secret not found"
-	@echo "✓ Cleaned"
+	@echo "=== Removing SOPS secret ==="; kubectl delete secret sops-age -n flux-system 2>/dev/null || echo "Secret not found"; echo "✓"

@@ -1,95 +1,84 @@
-# Flux k3s GitOps
+# Flux GitOps (k3s-friendly)
 
-Declarative Kubernetes cluster management with Flux and SOPS encryption.
+Declarative cluster with Flux CD and SOPS (age). Minimal steps, secure defaults.
 
 ## Prerequisites
 
-- k3s running
-- kubectl configured
-- Age key at: `~/.config/sops/keys/age.key`
-- GitHub Personal Access Token (fine-grained, repo contents:read/write)
+- A Kubernetes cluster (k3s/k8s) and `kubectl` configured
+- Tools: `flux`, `sops`, `age` (age-keygen), optional `yq`
+- GitHub repository with write access (this repo)
 
 ## Quick Start
 
 ```bash
-# 1. Bootstrap Flux
+# Optional: store your GitHub PAT encrypted (recommended)
+make add-gh-pat
+git add .secrets/github-pat.sops.yaml
+git commit -m "Add encrypted GH PAT"
+git push
+
+# 1) Initialize SOPS in-cluster (create sops-age secret)
+make init
+
+# 2) Bootstrap Flux (uses encrypted token if present, else prompts)
 make up
-# When prompted, paste your GitHub PAT
 
-# 2. Setup SOPS decryption
-make sops
-
-# 3. Verify
+# 3) Verify controllers and decryption
 make status
 ```
 
-## Make Commands
+Tip: Your age key lives locally at `~/.config/sops/keys/age.key`. `make init` will generate or import and also update `.sops.yaml` with the public recipient.
 
-| Command | Purpose |
-|---------|---------|
-| `make up` | Bootstrap Flux from GitHub |
-| `make sops` | Setup SOPS decryption |
-| `make reconcile` | Force reconciliation |
-| `make status` | Check Flux status |
-| `make logs` | Watch Flux logs |
-| `make down` | Uninstall Flux |
-| `make clean` | Remove SOPS secret |
+## What’s in here
 
-## How It Works
+- `k8s/clusters/home/kustomization.yaml`: root that applies in order: secrets → infra → apps
+- `k8s/infrastructure/base/*`: namespaces, storage, cert-manager (HelmRelease + ClusterIssuers), ingress-nginx
+- `k8s/infrastructure/base/kustomize-controller-patch.yaml`: mounts the `sops-age` secret and sets `SOPS_AGE_KEY_FILE`
+- `k8s/infrastructure/secrets/`: SOPS-encrypted `*.enc.yaml` files + `kustomization.yaml` listing them
+- `k8s/apps/home/`: place your apps; list them in `kustomization.yaml`
+- `Makefile`: one-liners for init, bootstrap, secrets, rotation, status
 
-```
-Git Repository (GitHub)
-    ↓
-Flux reads k8s/clusters/home/kustomization.yaml
-    ↓
-Deploys: secrets → infrastructure (cert-manager, ingress-nginx) → apps
-    ↓
-SOPS decrypts age-secret.yaml using your age.key
-    ↓
-Cluster reconciles to desired state
-```
+## Everyday tasks
 
-## Structure
-
-```
-k8s/
-├── clusters/home/              # Root kustomization
-│   └── kustomization.yaml
-├── infrastructure/
-│   ├── base/                   # cert-manager, ingress-nginx
-│   │   ├── cert-manager-helmrelease.yaml
-│   │   ├── cert-manager-clusterissuers.yaml
-│   │   ├── ingress-nginx-helmrelease.yaml
-│   │   ├── namespaces.yaml
-│   │   └── storage-class.yaml
-│   └── secrets/
-│       ├── age-secret.yaml     # SOPS-encrypted
-│       └── kustomization.yaml
-└── apps/home/                  # Your deployments
-    ├── kustomization.yaml
-    └── pod-migration-template.yaml
-```
-
-## Deploy Applications
-
-1. Copy template: `cp k8s/apps/home/pod-migration-template.yaml k8s/apps/home/myapp.yaml`
-2. Edit with your image, ports, volumes
-3. Add to `k8s/apps/home/kustomization.yaml` resources
-4. Commit & push: `git add . && git commit -m "Add myapp" && git push`
-5. Flux auto-deploys within 1 minute
-
-## Troubleshoot
+Add an encrypted secret applied by Flux:
 
 ```bash
-# Check Flux status
-make status
+make add-secret
+git add k8s/infrastructure/secrets/*.enc.yaml k8s/infrastructure/secrets/kustomization.yaml
+git commit -m "Add my secret"
+git push
+```
 
-# Watch logs
-make logs
+Rotate the age key and re-encrypt everything:
 
-# Force sync
-make reconcile
+```bash
+make rotate-keys
+git add .
+git commit -m "Rotate SOPS age key"
+git push
+```
 
-# Check specific pod logs
-kubectl logs -n flux-system deployment/kustomize-controller
+## First app
+
+1) Create a deployment YAML (or copy a template) under `k8s/apps/home/` (e.g. `myapp.yaml`). Then list it in `k8s/apps/home/kustomization.yaml`:
+
+```yaml
+resources:
+  - ./myapp.yaml
+```
+
+2) Commit and push. Flux will reconcile and deploy.
+
+## Notes
+
+- Ingress: ingress-nginx is a sensible default. You can switch later to Gateway API.
+- cert-manager: includes ClusterIssuers; switch to DNS-01 for wildcard domains later.
+- Security: only commit `*.enc.yaml` secrets and `.secrets/*.sops.yaml`. Plaintext is ignored.
+
+## Troubleshooting
+
+```bash
+make status          # Flux Kustomization + infra pods
+make logs            # kustomize-controller logs (SOPS errors show here)
+make reconcile       # Force a reconciliation
 ```
