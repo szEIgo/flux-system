@@ -11,6 +11,3 @@ resources:
   - cert-manager-clusterissuers.yaml
   - ingress-nginx-helmrelease.yaml
 
-# Patch to add SOPS age key volume to kustomize-controller
-patchesStrategicMerge:
-  - kustomize-controller-patch.yaml

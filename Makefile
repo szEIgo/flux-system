@@ -72,7 +72,7 @@ up:
 		exit 1; \
 	fi
 	@TOKEN=""; if [ -f "$(GITHUB_TOKEN_FILE)" ]; then \
-		TOKEN=$$(sops -d --extract '["github_token"]' $(GITHUB_TOKEN_FILE) 2>/dev/null || true); \
+		TOKEN=$$(SOPS_AGE_KEY_FILE=$(AGE_KEY) sops -d --extract '["github_token"]' $(GITHUB_TOKEN_FILE) 2>/dev/null || true); \
 	fi; \
 	if [ -n "$$TOKEN" ]; then \
 		echo "Using encrypted GitHub token from $(GITHUB_TOKEN_FILE)"; \
@@ -161,7 +161,7 @@ rotate-keys:
 	done
 	@echo "Re-encrypting $(GITHUB_TOKEN_FILE) (if present)"
 	@if [ -f "$(GITHUB_TOKEN_FILE)" ]; then \
-		sops -d $(GITHUB_TOKEN_FILE) > /tmp/ghtoken.tmp; \
+		SOPS_AGE_KEY_FILE=$(AGE_KEY) sops -d $(GITHUB_TOKEN_FILE) > /tmp/ghtoken.tmp; \
 		SOPS_AGE_KEY_FILE=$(AGE_KEY).new sops -e /tmp/ghtoken.tmp > $(GITHUB_TOKEN_FILE); \
 		rm -f /tmp/ghtoken.tmp; \
 	fi
