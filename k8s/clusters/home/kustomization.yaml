@@ -1,11 +1,11 @@
-# k8s/clusters/home/kustomization.yaml
-# This is the ROOT kustomization that ties everything together
+# clusters/home/kustomization.yaml
+# Cluster-specific configuration
+# This is the Flux entry point
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Build order is important: secrets first, then infrastructure, then apps
 resources:
-  - ../../infrastructure/secrets  # Deploy secrets first (includes sops-age)
-  - ../../infrastructure/base     # Deploy infrastructure (cert-manager, ingress, etc)
-  - ../../apps/home               # Deploy applications
+  - storageclass_all.yaml
+  - ../../infrastructure
+  - flux-system

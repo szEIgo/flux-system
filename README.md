@@ -38,42 +38,78 @@ Tip: Your age key lives locally at `~/.config/sops/keys/age.key`. `make init` wi
 - `k8s/apps/home/`: place your apps; list them in `kustomization.yaml`
 - `Makefile`: one-liners for init, bootstrap, secrets, rotation, status
 
-## Everyday tasks
+## Available Commands
 
-Add an encrypted secret applied by Flux:
+Run `make help` to see all available commands with descriptions. Commands are organized by category:
+
+- **Setup & Bootstrap**: `init`, `up`
+- **Secrets Management**: `add-gh-pat`, `add-secret`
+- **Day-to-Day Operations**: `reconcile`, `status`, `logs`
+- **Maintenance**: `rotate-keys`, `down`, `clean`
+
+## Common Tasks
+
+### Add an encrypted secret
 
 ```bash
 make add-secret
-git add k8s/infrastructure/secrets/*.enc.yaml k8s/infrastructure/secrets/kustomization.yaml
+# Follow prompts: filename, key name, value
+git add k8s/infrastructure/flux-system-secrets/*.enc.yaml
+git add k8s/infrastructure/flux-system-secrets/kustomization.yaml
 git commit -m "Add my secret"
 git push
 ```
 
-Rotate the age key and re-encrypt everything:
+### Rotate the age encryption key
 
 ```bash
 make rotate-keys
-git add .
+git add .sops.yaml k8s/infrastructure/flux-system-secrets/*.enc.yaml
 git commit -m "Rotate SOPS age key"
 git push
 ```
 
-## First app
+### Force reconciliation
 
-1) Create a deployment YAML (or copy a template) under `k8s/apps/home/` (e.g. `myapp.yaml`). Then list it in `k8s/apps/home/kustomization.yaml`:
-
-```yaml
-resources:
-  - ./myapp.yaml
+```bash
+make reconcile
 ```
 
-2) Commit and push. Flux will reconcile and deploy.
+### Check status
 
-## Notes
+```bash
+make status
+```
 
-- Ingress: ingress-nginx is a sensible default. You can switch later to Gateway API.
-- cert-manager: includes ClusterIssuers; switch to DNS-01 for wildcard domains later.
-- Security: only commit `*.enc.yaml` secrets and `.secrets/*.sops.yaml`. Plaintext is ignored.
+## Architecture
+
+### Reconciliation Flow
+
+```
+Root (k8s/kustomization.yaml)
+├── clusters/home/
+│   ├── cluster-config.yaml (storage classes)
+│   └── flux-system/ (generated)
+└── infrastructure/
+    ├── nginx-ingress/
+    ├── cert-manager/
+    └── flux-system-secrets/
+```
+
+### Infrastructure Components
+
+- **nginx-ingress**: HelmRelease with v4.10.0+, LoadBalancer service (uses k3s servicelb)
+- **cert-manager**: HelmRelease with v1.15.0+, includes ClusterIssuers:
+  - `selfsigned`: For internal/development certificates
+  - `letsencrypt-prod`: For production domains with HTTP-01 challenge
+- **Storage**: Two StorageClasses using k3s local-path provisioner (`local-path`, `fast`)
+
+### Security
+
+- **Encryption**: All secrets are SOPS-encrypted with age
+- **Git Safety**: Only commit `*.enc.yaml` secrets. Plaintext is ignored via `.gitignore`
+- **Age Key**: Stored locally at `~/.config/sops/keys/age.key` (never committed)
+- **In-Cluster**: `sops-age` Secret in `flux-system` namespace for server-side decryption
 
 ## Troubleshooting
 

@@ -1,0 +1,60 @@
+---
+# Namespace must be created first
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ingress-nginx
+---
+# HelmRepository for ingress-nginx
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: ingress-nginx
+  namespace: ingress-nginx
+spec:
+  interval: 24h
+  url: https://kubernetes.github.io/ingress-nginx
+---
+# Ingress-Nginx Helm Release
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ingress-nginx
+  namespace: ingress-nginx
+spec:
+  interval: 1h0m0s
+  chart:
+    spec:
+      chart: ingress-nginx
+      version: ">=4.10.0"
+      sourceRef:
+        kind: HelmRepository
+        name: ingress-nginx
+        namespace: ingress-nginx
+  values:
+    controller:
+      hostNetwork: true
+      hostPort:
+        enabled: true
+        ports:
+          http: 80
+          https: 443
+      service:
+        type: ClusterIP
+        externalIPs:
+          - 192.168.2.240
+      kind: DaemonSet
+      metrics:
+        enabled: true
+      resources:
+        requests:
+          cpu: 100m
+          memory: 90Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+      config:
+        use-forwarded-headers: "true"
+        use-proxy-protocol: "false"
+      nodeSelector:
+        kubernetes.io/hostname: mothership
