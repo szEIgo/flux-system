@@ -2,22 +2,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: pod3
+  name: szigethy-lan
   namespace: apps
   labels:
-    app: pod3
+    app: szigethy-lan
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: pod3
+      app: szigethy-lan
   template:
     metadata:
       labels:
-        app: pod3
+        app: szigethy-lan
     spec:
       containers:
-      - name: pod3
+      - name: whoami
         image: ghcr.io/traefik/whoami:latest
         ports:
         - name: http
@@ -38,13 +38,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: pod3
+  name: szigethy-lan
   namespace: apps
   labels:
-    app: pod3
+    app: szigethy-lan
 spec:
   selector:
-    app: pod3
+    app: szigethy-lan
   ports:
   - name: http
     port: 80
@@ -52,54 +52,25 @@ spec:
     protocol: TCP
   type: ClusterIP
 ---
-# Public .dk Ingress using Let's Encrypt
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: pod3-dk
-  namespace: apps
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-spec:
-  ingressClassName: nginx
-  tls:
-  - hosts:
-    - pod3.szigethy.dk
-    secretName: pod3-dk-tls
-  rules:
-  - host: pod3.szigethy.dk
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: pod3
-            port:
-              number: 80
-
----
-# LAN .lan Ingress using shared wildcard cert
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: pod3-lan
+  name: szigethy-lan
   namespace: apps
 spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - pod3.szigethy.lan
+    - szigethy.lan
     secretName: szigethy-lan-tls
   rules:
-  - host: pod3.szigethy.lan
+  - host: szigethy.lan
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: pod3
+            name: szigethy-lan
             port:
               number: 80
-

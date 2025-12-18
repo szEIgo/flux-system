@@ -5,8 +5,8 @@ kind: Kustomization
 
 resources:
   - ./pod1.yaml
-  - ./pod2.yaml
-  - ./pod3.yaml
+  #- ./pod2.yaml
+  #- ./pod3.yaml
   # - ./example-app/deployment.yaml
 
 labels:

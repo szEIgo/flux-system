@@ -57,14 +57,12 @@ kind: Ingress
 metadata:
   name: pod1
   namespace: apps
-  annotations:
-    cert-manager.io/cluster-issuer: "selfsigned"
 spec:
   ingressClassName: nginx
   tls:
   - hosts:
     - pod1.szigethy.lan
-    secretName: pod1-tls
+    secretName: szigethy-lan-tls
   rules:
   - host: pod1.szigethy.lan
     http:
