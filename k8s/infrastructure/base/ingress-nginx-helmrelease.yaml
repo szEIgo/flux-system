@@ -37,6 +37,12 @@ spec:
       config:
         use-forwarded-headers: "true"
         use-proxy-protocol: "false"
+      admissionWebhooks:
+        enabled: true
+        patch:
+          enabled: true
+        certManager:
+          enabled: true
 ---
 # HelmRepository for ingress-nginx
 apiVersion: source.toolkit.fluxcd.io/v1beta2

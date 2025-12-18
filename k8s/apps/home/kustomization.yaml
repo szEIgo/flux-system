@@ -9,5 +9,6 @@ resources:
   - ./pod3.yaml
   # - ./example-app/deployment.yaml
 
-commonLabels:
-  app.kubernetes.io/managed-by: flux
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: flux
