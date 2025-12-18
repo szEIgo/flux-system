@@ -8,4 +8,5 @@ kind: Kustomization
 resources:
   - ./secrets-kustomization.yaml
   - ./infra-kustomization.yaml
+  - ./infra-config-kustomization.yaml
   - ./apps-kustomization.yaml
