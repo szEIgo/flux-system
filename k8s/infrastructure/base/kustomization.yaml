@@ -11,6 +11,7 @@ resources:
   - cert-manager-clusterissuers.yaml
   - ingress-nginx-helmrelease.yaml
   - coredns-configmap.yaml
-  - metallb-helmrelease.yaml
   - metallb-config.yaml
+  - metallb-helmrelease.yaml
+  
 
