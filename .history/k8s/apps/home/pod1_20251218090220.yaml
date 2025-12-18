@@ -1,0 +1,105 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod1
+  namespace: apps
+  labels:
+    app: pod1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pod1
+  template:
+    metadata:
+      labels:
+        app: pod1
+    spec:
+      containers:
+      - name: pod1
+        image: ghcr.io/traefik/whoami:latest
+        ports:
+        - name: http
+          containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pod1
+  namespace: apps
+  labels:
+    app: pod1
+spec:
+  selector:
+    app: pod1
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pod1
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: "selfsigned"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - pod1.szigethy.lan
+    secretName: pod1-tls
+  rules:
+  - host: pod1.szigethy.lan
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: pod1
+            port:
+              number: 80
+
+---
+# Public .dk Ingress using Let's Encrypt (HTTP-01 via nginx)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pod1-dk
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - pod1.szigethy.dk
+    secretName: pod1-dk-tls
+  rules:
+  - host: pod1.szigethy.dk
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: pod1
+            port:
+              number: 80

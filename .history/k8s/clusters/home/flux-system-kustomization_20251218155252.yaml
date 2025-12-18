@@ -1,0 +1,21 @@
+---
+# This Kustomization resource tells Flux how to decrypt SOPS-encrypted secrets
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  path: ./k8s/clusters/home
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  # CRITICAL: This tells Flux to use SOPS provider (not age) with the age key from sops-age secret
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age

@@ -1,26 +1,28 @@
-.PHONY: help init up add-secret add-gh-pat rotate-keys reconcile status logs down clean
+.PHONY: help init up add-secret add-gh-pat rotate-keys reconcile reconcile-all status logs down clean verify-structure
 
 GITHUB_OWNER := szeigo
 GITHUB_REPO := flux-system
-GITHUB_BRANCH := b2b
+GITHUB_BRANCH := main
 FLUX_PATH := ./k8s/clusters/home
 AGE_KEY := $(HOME)/.config/sops/keys/age.key
 GITHUB_TOKEN_FILE := .secrets/github-pat.sops.yaml
 
 help:
-	@echo "Flux GitOps with SOPS"
+	@echo "Flux GitOps with SOPS + Kustomize"
 	@echo ""
 	@echo "Usage:"
-	@echo "  make init          - Ensure age key, create sops-age secret, configure decryption"
-	@echo "  make add-gh-pat    - Store GitHub PAT encrypted at $(GITHUB_TOKEN_FILE)"
-	@echo "  make up            - Bootstrap Flux (uses encrypted GH token if present)"
-	@echo "  make add-secret    - Add a K8s Secret encrypted into k8s/infrastructure/secrets/"
-	@echo "  make rotate-keys   - Rotate age key and re-encrypt all secrets"
-	@echo "  make reconcile     - Force Flux reconciliation"
-	@echo "  make status        - Show Flux status and infra pods"
-	@echo "  make logs          - Tail kustomize-controller logs"
-	@echo "  make down          - Uninstall Flux"
-	@echo "  make clean         - Delete sops-age secret from cluster"
+	@echo "  make init              - Ensure age key, create sops-age secret, configure decryption"
+	@echo "  make add-gh-pat        - Store GitHub PAT encrypted at $(GITHUB_TOKEN_FILE)"
+	@echo "  make up                - Bootstrap Flux and fully reconcile all kustomizations"
+	@echo "  make reconcile         - Quick: reconcile flux-system and downstream kustomizations"
+	@echo "  make reconcile-all     - Full: force reconcile all kustomizations (secrets, infra, config, apps)"
+	@echo "  make add-secret        - Add a K8s Secret encrypted into k8s/infrastructure/secrets/"
+	@echo "  make rotate-keys       - Rotate age key and re-encrypt all secrets"
+	@echo "  make verify-structure  - Validate kustomize build at each layer"
+	@echo "  make status            - Show Flux status, kustomization details, and pod health"
+	@echo "  make logs              - Tail kustomize-controller logs"
+	@echo "  make down              - Uninstall Flux (preserve data)"
+	@echo "  make clean             - Delete sops-age secret from cluster"
 	@echo ""
 	@echo "Flow: make init -> (optional: make add-gh-pat) -> make up"
 
@@ -95,8 +97,36 @@ up:
 	@echo "Configuring SOPS decryption on flux-system Kustomization..."
 	kubectl patch kustomization flux-system -n flux-system \
 		--type merge -p '{"spec":{"decryption":{"provider":"sops","secretRef":{"name":"sops-age"}}}}'
-	@echo "Reconciling..."; flux reconcile kustomization flux-system --with-source
-	@echo "✓ Flux bootstrapped with SOPS"
+	@echo "✓ Flux bootstrapped. Now reconciling all components..."
+	@$(MAKE) reconcile-all
+
+reconcile:
+	@echo "=== Quick Reconcile: flux-system + downstream ==="
+	flux reconcile kustomization flux-system --with-source
+	@sleep 2
+	@echo "Waiting for downstream kustomizations..."
+	@flux reconcile kustomization home-secrets 2>/dev/null || true
+	@flux reconcile kustomization home-infra 2>/dev/null || true
+	@flux reconcile kustomization home-infra-config 2>/dev/null || true
+	@flux reconcile kustomization home-apps 2>/dev/null || true
+	@echo "✓ Reconciliation triggered"
+
+reconcile-all:
+	@echo "=== Full Reconcile: all kustomizations ==="
+	@echo "Step 1: Reconcile secrets (depends on nothing)"
+	flux reconcile kustomization home-secrets --with-source
+	@sleep 3
+	@echo "Step 2: Reconcile infrastructure controllers (depends on secrets)"
+	flux reconcile kustomization home-infra --with-source
+	@sleep 3
+	@echo "Step 3: Reconcile infrastructure config (depends on infra)"
+	flux reconcile kustomization home-infra-config --with-source
+	@sleep 3
+	@echo "Step 4: Reconcile applications (depends on infra)"
+	flux reconcile kustomization home-apps --with-source
+	@sleep 2
+	@echo "✓ Full reconciliation complete"
+	@$(MAKE) status
 
 add-secret:
 	@echo "=== Adding new SOPS-encrypted Kubernetes Secret ===" && \
@@ -178,11 +208,43 @@ reconcile:
 	@echo "=== Reconciling Flux ==="; flux reconcile kustomization flux-system --with-source; echo "✓"
 
 status:
-	@echo "=== Flux Status ==="; flux get kustomization -n flux-system flux-system || true; echo ""; \
-	 echo "=== Infrastructure Pods ==="; \
-	 kubectl get pods -n cert-manager 2>/dev/null || echo "cert-manager: not deployed"; \
-	 kubectl get pods -n ingress-nginx 2>/dev/null || echo "ingress-nginx: not deployed"; \
-	 kubectl get pods -n apps 2>/dev/null || echo "apps: namespace exists"
+	@echo "=== Flux System Status ===" && \
+	 flux get kustomization -n flux-system || true && \
+	 echo "" && \
+	 echo "=== Detailed Kustomization Status ===" && \
+	 for ks in flux-system home-secrets home-infra home-infra-config home-apps; do \
+	   echo "--- $$ks ---"; \
+	   kubectl get kustomization $$ks -n flux-system -o jsonpath='{.status.conditions[?(@.type=="Ready")].message}' 2>/dev/null || echo "Not found"; \
+	 done && \
+	 echo "" && \
+	 echo "=== Core Namespaces ===" && \
+	 kubectl get ns cert-manager ingress-nginx metallb-system apps 2>/dev/null || echo "Some namespaces not ready" && \
+	 echo "" && \
+	 echo "=== HelmReleases ===" && \
+	 flux get helmrelease -n ingress-nginx 2>/dev/null || echo "ingress-nginx: not deployed" && \
+	 flux get helmrelease -n metallb-system 2>/dev/null || echo "metallb: not deployed" && \
+	 flux get helmrelease -n cert-manager 2>/dev/null || echo "cert-manager: not deployed" && \
+	 echo "" && \
+	 echo "=== Pods by Namespace ===" && \
+	 echo "cert-manager:" && kubectl get pods -n cert-manager --no-headers 2>/dev/null | head -5 || echo "  (not deployed)" && \
+	 echo "ingress-nginx:" && kubectl get pods -n ingress-nginx --no-headers 2>/dev/null | head -5 || echo "  (not deployed)" && \
+	 echo "metallb-system:" && kubectl get pods -n metallb-system --no-headers 2>/dev/null | head -5 || echo "  (not deployed)" && \
+	 echo "apps:" && kubectl get pods -n apps --no-headers 2>/dev/null | head -5 || echo "  (not deployed)"
+
+verify-structure:
+	@echo "=== Verifying Kustomize Structure ===" && \
+	 echo "Checking: k8s/infrastructure/base" && \
+	 kustomize build k8s/infrastructure/base >/dev/null && echo "  ✓ Valid" || echo "  ✗ FAILED" && \
+	 echo "Checking: k8s/infrastructure/controllers" && \
+	 kustomize build k8s/infrastructure/controllers >/dev/null && echo "  ✓ Valid" || echo "  ✗ FAILED" && \
+	 echo "Checking: k8s/infrastructure/config" && \
+	 kustomize build k8s/infrastructure/config >/dev/null && echo "  ✓ Valid" || echo "  ✗ FAILED" && \
+	 echo "Checking: k8s/infrastructure/secrets" && \
+	 kustomize build k8s/infrastructure/secrets >/dev/null && echo "  ✓ Valid" || echo "  ✗ FAILED" && \
+	 echo "Checking: k8s/apps/home" && \
+	 kustomize build k8s/apps/home >/dev/null && echo "  ✓ Valid" || echo "  ✗ FAILED" && \
+	 echo "Checking: k8s/clusters/home (root)" && \
+	 kustomize build k8s/clusters/home >/dev/null && echo "  ✓ Valid" || echo "  ✗ FAILED"
 
 logs:
 	@echo "=== Flux Logs (kustomize-controller) ==="; kubectl logs -n flux-system deployment/kustomize-controller -f --tail=50

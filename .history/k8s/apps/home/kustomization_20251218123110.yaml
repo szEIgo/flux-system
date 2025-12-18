@@ -1,0 +1,14 @@
+# k8s/apps/home/kustomization.yaml
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ./pod1.yaml
+  - ./pod2.yaml
+  - ./pod3.yaml
+  # - ./example-app/deployment.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: flux
