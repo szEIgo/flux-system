@@ -7,10 +7,3 @@ namespace: cert-manager
 
 resources:
   - certmanager_jetstack.yaml
-
-# Wait for cert-manager webhook to be ready
-healthChecks:
-  - apiVersion: apps/v1
-    kind: Deployment
-    name: cert-manager-webhook
-    namespace: cert-manager
