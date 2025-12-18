@@ -7,7 +7,6 @@ resources:
   - ./pod1.yaml
   #- ./pod2.yaml
   #- ./pod3.yaml
-  - ./szigethy-lan.yaml
   # - ./example-app/deployment.yaml
 
 labels:
