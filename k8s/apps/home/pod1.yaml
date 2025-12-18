@@ -76,30 +76,3 @@ spec:
             name: pod1
             port:
               number: 80
-
----
-# Public .dk Ingress using Let's Encrypt (HTTP-01 via nginx)
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: pod1-dk
-  namespace: apps
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-spec:
-  ingressClassName: nginx
-  tls:
-  - hosts:
-    - pod1.szigethy.dk
-    secretName: pod1-dk-tls
-  rules:
-  - host: pod1.szigethy.dk
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: pod1
-            port:
-              number: 80
