@@ -1,0 +1,16 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: home-apps
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  dependsOn:
+    - name: home-infra
+  path: ./k8s/apps/home
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  validation: client
+  wait: true

@@ -43,6 +43,7 @@ spec:
           enabled: true
         certManager:
           enabled: true
+        failurePolicy: Ignore
 ---
 # HelmRepository for ingress-nginx
 apiVersion: source.toolkit.fluxcd.io/v1beta2
