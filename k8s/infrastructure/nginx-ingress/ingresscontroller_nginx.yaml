@@ -33,16 +33,12 @@ spec:
         namespace: ingress-nginx
   values:
     controller:
-      hostNetwork: true
-      hostPort:
-        enabled: true
-        ports:
-          http: 80
-          https: 443
+      # Use NodePort so podman proxy can forward to it
       service:
-        type: ClusterIP
-        externalIPs:
-          - 192.168.2.240
+        type: NodePort
+        nodePorts:
+          http: 30080
+          https: 30443
       kind: DaemonSet
       metrics:
         enabled: true
