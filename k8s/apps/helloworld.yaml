@@ -1,7 +1,3 @@
-# Example Application Manifest
-# Copy this template to create new apps
-
----
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -49,7 +45,7 @@ metadata:
   name: helloworld
   namespace: helloworld
   annotations:
-    cert-manager.io/cluster-issuer: "selfsigned"  # or "letsencrypt-prod"
+    cert-manager.io/cluster-issuer: "selfsigned"
 spec:
   ingressClassName: nginx
   tls:
@@ -58,6 +54,32 @@ spec:
     secretName: helloworld-tls
   rules:
   - host: helloworld.szigethy.lan
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: helloworld
+            port:
+              number: 80
+              
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: helloworld
+  namespace: helloworld
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # or "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - helloworld.szigethy.lan
+    secretName: letsencrypt-tls
+  rules:
+  - host: helloworld.szigethy.dk
     http:
       paths:
       - path: /
