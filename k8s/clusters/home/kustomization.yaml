@@ -7,6 +7,7 @@ kind: Kustomization
 
 resources:
   - storageclass_all.yaml
+  - ../../apps
   - ../../infrastructure
   - cert-manager-issuers-ks.yaml
   - flux-system

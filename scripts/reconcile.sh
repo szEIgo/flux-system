@@ -6,6 +6,6 @@
 
 set -euo pipefail
 
-echo "=== Reconciling Flux ==="
+echo "Reconciling Flux..."
 flux reconcile kustomization flux-system --with-source
 echo "✓"

@@ -15,7 +15,7 @@ source "$SCRIPT_DIR/config.sh"
 
 GITHUB_TOKEN_FILE="$REPO_ROOT/.secrets/github-pat.sops.yaml"
 
-echo "=== Bootstrapping Flux from GitHub ==="
+echo "Bootstrapping Flux from GitHub..."
 
 # Verify sops-age secret exists
 if ! kubectl -n flux-system get secret sops-age >/dev/null 2>&1; then

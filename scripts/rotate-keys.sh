@@ -15,7 +15,7 @@ source "$SCRIPT_DIR/config.sh"
 SECRETS_DIR="$REPO_ROOT/$SECRETS_DIR"
 GITHUB_TOKEN_FILE="$REPO_ROOT/.secrets/github-pat.sops.yaml"
 
-echo "=== Rotating age key and re-encrypting secrets ==="
+echo "Rotating age key and re-encrypting secrets..."
 
 # Generate new key
 mkdir -p "$(dirname "$AGE_KEY")"

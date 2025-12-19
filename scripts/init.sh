@@ -13,7 +13,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Source configuration
 source "$SCRIPT_DIR/config.sh"
 
-echo "=== Initializing SOPS + cluster decryption ==="
+echo "Initializing SOPS + cluster decryption..."
 
 # Check/generate age key
 if [ ! -f "$AGE_KEY" ]; then

@@ -7,11 +7,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Flux GitOps with SOPS (Simplified)"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Flux GitOps with SOPS"
 echo ""
-echo "All automation logic is in scripts/ directory."
+echo "All automation logic is in scripts/"
 echo ""
 
 # Find all scripts and extract their metadata
@@ -55,10 +53,10 @@ print_category() {
     
     [ $found -eq 0 ] && return
     
-    echo "┌─ $title"
+    echo "$title:"
     for name in $(echo "${!descriptions[@]}" | tr ' ' '\n' | sort); do
         if [ "${categories[$name]}" = "$cat" ]; then
-            printf "│  %-15s  %s\n" "${usages[$name]}" "${descriptions[$name]}"
+            printf "  %-15s  %s\n" "${usages[$name]}" "${descriptions[$name]}"
         fi
     done
     echo ""
@@ -71,10 +69,6 @@ print_category "operations" "Day-to-Day Operations"
 print_category "maintenance" "Maintenance"
 print_category "info" "Information"
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Quick Start: make init → make add-gh-pat → make up"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+echo "Quick Start: make init -> make add-gh-pat -> make up"
 echo "Configuration: scripts/config.sh"
-echo "Documentation: README.md"
 echo ""

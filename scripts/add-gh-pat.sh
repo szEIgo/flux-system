@@ -11,7 +11,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 GITHUB_TOKEN_FILE="$REPO_ROOT/.secrets/github-pat.sops.yaml"
 
-echo "=== Store encrypted GitHub PAT for bootstrap ==="
+echo "Store encrypted GitHub PAT..."
 mkdir -p "$REPO_ROOT/.secrets"
 
 read -sp "GitHub PAT (will be stored encrypted): " token

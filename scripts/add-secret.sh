@@ -15,7 +15,7 @@ source "$SCRIPT_DIR/config.sh"
 SECRETS_DIR="$REPO_ROOT/$SECRETS_DIR"
 KUSTOMIZATION_FILE="$REPO_ROOT/$KUSTOMIZATION_FILE"
 
-echo "=== Adding new SOPS-encrypted Kubernetes Secret ==="
+echo "Adding new SOPS-encrypted Kubernetes Secret..."
 
 read -p "Secret filename (without .enc.yaml): " name
 read -p "Secret key (e.g., github-token): " key

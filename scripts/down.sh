@@ -6,6 +6,6 @@
 
 set -euo pipefail
 
-echo "=== Uninstalling Flux ==="
+echo "Uninstalling Flux..."
 flux uninstall --silent
 echo "✓"
