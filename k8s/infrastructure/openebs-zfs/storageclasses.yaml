@@ -1,0 +1,31 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: zfs-fast
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: zfs.csi.openebs.io
+parameters:
+  poolname: "fastPool/k3s"
+  fstype: "zfs"
+  compression: "lz4"
+  recordsize: "128K"
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: zfs-slow
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: zfs.csi.openebs.io
+parameters:
+  poolname: "slowPool/k3s"
+  fstype: "zfs"
+  compression: "lz4"
+  recordsize: "128K"
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer

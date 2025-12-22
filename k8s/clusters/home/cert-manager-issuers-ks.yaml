@@ -1,6 +1,4 @@
 ---
-# Flux Kustomization for ClusterIssuers
-# Depends on cert-manager being healthy
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -13,7 +11,6 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  # Wait for cert-manager to be ready first
   dependsOn:
     - name: flux-system
   healthChecks:

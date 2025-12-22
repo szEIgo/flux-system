@@ -1,6 +1,3 @@
-# Infrastructure components kustomization
-# Deploy cert-manager first, then issuers
-
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -8,3 +5,4 @@ resources:
   - nginx-ingress
   - cert-manager
   - flux-system-secrets
+  - openebs-zfs

@@ -1,7 +1,3 @@
-# clusters/home/kustomization.yaml
-# Cluster-specific configuration
-# This is the Flux entry point
-
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
