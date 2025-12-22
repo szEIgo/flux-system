@@ -6,7 +6,3 @@ kind: Kustomization
 
 resources:
   - schmidtsgarage.yaml
-  - schmidtsgarage-pvc.yaml
-  - schmidtsgarage-pat.sops.yaml
-  # - myapp.yaml
-  # - another-app.yaml
