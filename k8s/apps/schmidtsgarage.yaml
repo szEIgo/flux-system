@@ -1,23 +1,23 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: helloworld
+  name: schmidtsgarage
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: helloworld
-  namespace: helloworld
+  name: schmidtsgarage
+  namespace: schmidtsgarage
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: helloworld
+      app: schmidtsgarage
   template:
     metadata:
       labels:
-        app: helloworld
+        app: schmidtsgarage
     spec:
       initContainers:
       - name: content-sync
@@ -26,7 +26,7 @@ spec:
         - name: GITHUB_TOKEN
           valueFrom:
             secretKeyRef:
-              name: helloworld-github-token
+              name: schmidtsgarage-github-token
               key: token
         command: ["/bin/sh","-c"]
         args:
@@ -39,7 +39,6 @@ spec:
               git -C "$target" reset --hard origin/main || true
             else
               git config --global advice.detachedHead false
-              # Use token over HTTPS for private repo access
               repo=https://$GITHUB_TOKEN@github.com/szEIgo/schmidtsgarage.git
               git clone --depth 1 "$repo" "$target"
             fi
@@ -47,7 +46,7 @@ spec:
         - name: www
           mountPath: /data/www
       containers:
-      - name: helloworld
+      - name: schmidtsgarage
         image: nginx:alpine
         ports:
         - containerPort: 80
@@ -57,17 +56,17 @@ spec:
       volumes:
       - name: www
         persistentVolumeClaim:
-          claimName: helloworld-www
+          claimName: schmidtsgarage-www
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: helloworld
-  namespace: helloworld
+  name: schmidtsgarage
+  namespace: schmidtsgarage
 spec:
   selector:
-    app: helloworld
+    app: schmidtsgarage
   ports:
   - port: 80
     targetPort: 80
@@ -76,25 +75,25 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: helloworld
-  namespace: helloworld
+  name: schmidtsgarage
+  namespace: schmidtsgarage
   annotations:
     cert-manager.io/cluster-issuer: "selfsigned"
 spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - helloworld.szigethy.lan
-    secretName: helloworld-tls
+    - schmidtsgarage.szigethy.lan
+    secretName: schmidtsgarage-tls
   rules:
-  - host: helloworld.szigethy.lan
+  - host: schmidtsgarage.szigethy.lan
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: helloworld
+            name: schmidtsgarage
             port:
               number: 80
               
@@ -102,24 +101,24 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: helloworld-public
-  namespace: helloworld
+  name: schmidtsgarage-public
+  namespace: schmidtsgarage
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - helloworld.szigethy.dk
+    - schmidtsgarage.szigethy.dk
     secretName: letsencrypt-tls
   rules:
-  - host: helloworld.szigethy.dk
+  - host: schmidtsgarage.szigethy.dk
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: helloworld
+            name: schmidtsgarage
             port:
               number: 80
