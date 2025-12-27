@@ -1,0 +1,118 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: contact
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+    name: contact-service-secrets
+    namespace: contact
+type: Opaque
+stringData:
+    GATEWAY_API_TOKEN: ENC[AES256_GCM,data:p/5yfgMIp0EFqvYtNZTucRtv7ZCQ7syrmZa8FViFq/SrhwsTBWQlgDRPoDaz83kWaUQ2/RNF1DTlsTwDu3hCzA==,iv:ObduaACnNAiG1BRQBA98sUntnjh4MamO9+4EYavJajc=,tag:aIIBAvNIIdv/XIp+qayVgg==,type:str]
+    MAILERSEND_TOKEN: ENC[AES256_GCM,data:Gp0G1d/oMRyLGx9M31h7tEg6jx95S5P+CORH88Y3gGjR4R6ay8t68Dpl1OTffztKclvqtZLWUl8CDl5prnS3hKFqD5Sl,iv:ce4pTowbUhYzIXsANqi1MoPKf0T+WI8RDT892pkPaDE=,tag:zoSVF8kT6VHrtf6m5vOo5w==,type:str]
+sops:
+    age:
+        - recipient: age19fmyfyqqx37raywwtlt7ynpgq7jd8dq365m79lqe7u8jy7e8kqesk0tzrp
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBWK0Q3MUhyNHlqajJ6a3Nw
+            dnkxNTYrc3VpSVdqbmg0R3ZUcGNNVW4rNjNrCkM4OHVlMkVvSUpEaG1LaURBR2hp
+            V1FnaWVBL2JteWdsM2dnYjJ4MmNiMXMKLS0tIFNhL0JEQSt6RmFwUnhwSVZiMVdi
+            Nmw0M25DaTBSdzNtRSs3Y0w1Q2F0eVkKWKnh0Gt3f9O3GHDlT72URYbWwoO38yh2
+            kOEueuC6NEEMRf7JZ1n1xjDWGU6xiuNYU33GTHiiR45yq49ctiC3WQ==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2025-12-27T23:35:32Z"
+    mac: ENC[AES256_GCM,data:cEB1T3ULEOiaiIcf05hlXx8bi3PyPFP8fkFQa/X1rDIs/FwU+Ex81ayWSPf6S26as0b/dbCz9LHz/KgHQyKyqVpLfrTScuhicK5ZbQl2LmGTWfKhmCNyd2ZAmnnZKKAXTDkyb4uaxBMeAEV5hJH2PfDNSwL6r/TR9r52TcyL2XA=,iv:71ndQaDIDJdw8+yOTHXAwxuiYMXP5WdgrFwtbQuNnNQ=,tag:SMf6WHh1faSodsY9SDSB0A==,type:str]
+    unencrypted_regex: ^(apiVersion|metadata|kind|type)$
+    version: 3.11.0
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: contact-service
+  namespace: contact
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: contact-service
+  template:
+    metadata:
+      labels:
+        app: contact-service
+    spec:
+      containers:
+      - name: contact-service
+        image: ghcr.io/szeigo/contact-service:1.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8066
+          name: http
+        env:
+        - name: HOST
+          value: "0.0.0.0"
+        - name: PORT
+          value: "8066"
+        - name: LOG_DIR
+          value: "/app/logs"
+        - name: GATEWAY_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: contact-service-secrets
+              key: GATEWAY_API_TOKEN
+        - name: MAILERSEND_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: contact-service-secrets
+              key: MAILERSEND_TOKEN
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: logs
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: contact-service
+  namespace: contact
+spec:
+  type: ClusterIP
+  selector:
+    app: contact-service
+  ports:
+  - name: http
+    port: 8066
+    targetPort: 8066
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: contact-service
+  namespace: contact
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - kontakt.norsemen.io
+    secretName: letsencrypt-tls
+  rules:
+  - host: kontakt.norsemen.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: contact-service
+            port:
+              number: 8066

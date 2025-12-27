@@ -6,3 +6,4 @@ kind: Kustomization
 
 resources:
   - schmidtsgarage.yaml
+  - contact-service.yaml
