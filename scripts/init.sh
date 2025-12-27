@@ -42,7 +42,7 @@ kubectl create namespace flux-system 2>/dev/null || true
 # Create/update sops-age secret
 echo "Creating/Updating sops-age secret..."
 kubectl create secret generic sops-age \
-    --from-file=age.key="$AGE_KEY" \
+    --from-file=age.agekey="$AGE_KEY" \
     -n flux-system \
     --dry-run=client -o yaml | kubectl apply -f -
 

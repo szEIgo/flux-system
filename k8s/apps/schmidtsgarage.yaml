@@ -135,7 +135,7 @@ spec:
             name: schmidtsgarage
             port:
               number: 80
-              
+
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -148,10 +148,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - schmidtsgarage.szigethy.dk
+    - schmidtsgarage.dk
     secretName: letsencrypt-tls
   rules:
-  - host: schmidtsgarage.szigethy.dk
+  - host: schmidtsgarage.dk
     http:
       paths:
       - path: /

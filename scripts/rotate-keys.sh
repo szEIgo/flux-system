@@ -54,7 +54,7 @@ mv "$AGE_KEY.new" "$AGE_KEY"
 # Update cluster secret
 echo "Updating cluster sops-age secret..."
 kubectl create secret generic sops-age \
-    --from-file=age.key="$AGE_KEY" \
+    --from-file=age.agekey="$AGE_KEY" \
     -n flux-system \
     --dry-run=client -o yaml | kubectl apply -f -
 
