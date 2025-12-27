@@ -7,6 +7,31 @@ metadata:
 apiVersion: v1
 kind: Secret
 metadata:
+    name: ghcr-pull-secret
+    namespace: contact
+type: kubernetes.io/dockerconfigjson
+stringData:
+    .dockerconfigjson: ENC[AES256_GCM,data:gyzLhCVkQy3FL6uLNFFwcqZjL1EiSbQslnIgM3MeQsMVwx8OPEyrGbW1hX/AHhqO+QwcQQe7EZHY6RMliSQKvpy7Eniy8OlmyRtYRhTKXyqfoJZ/g+DKhkxFCnw2NYKdBifIuEJX0vr2dExA91W8Cj3vDq38UhXGeHHDz6Foe1AizoPQrzW9i2hvJVX/7fS/O3r1tKNcHUH1TRmMjDsT6+M8IO9TjIvrlTxrEA==,iv:doIn5pJ3fYPmi+h+hnDIivnZrMGRTAuatGxThNUibRI=,tag:J/TXFZiZ777s39hDFREipg==,type:str]
+sops:
+    age:
+        - recipient: age19fmyfyqqx37raywwtlt7ynpgq7jd8dq365m79lqe7u8jy7e8kqesk0tzrp
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSB6My84UWNrUDFlVUFabmFQ
+            REx6OUlzRGd0S2laa05kSVVTZStxTHNKSVdZCkVZbVBCL2w3eWtwTnRDcFZqYTMv
+            eVArU2dvcDNNWFJnd1RRY3FDRDlPOTAKLS0tIHgyOXFjTTdQSlYwTUlIeUVXTVZz
+            cnJPSmw5Y0lxUkNNeHd1Z0ZPYzY4b1EKWUDLwVQFQ4/5xoGHJL4Dew09UnvSRhYq
+            ZuLjPNvXvOrIpmhY/BVpinfCxfzpJn+xPSj15ByX/I2xRAeNtBMsnw==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2025-12-27T23:50:26Z"
+    mac: ENC[AES256_GCM,data:8ksU4pk0Kf82j5Qs88iPyMpTsNeS6dvbigPRYi19cQoHa0ehBiz+eKcWr3YojU0eRmKGXIbEhw5BRWixKZ7jAkbp4LOXQ/DF7Ww9hrY4PKneHrjm8fcV4z8wLxy0oDWor4u2zmOy3OPMWc8fhHHBTGtpBa8oXdt7Gq/UuIa7bck=,iv:cvAbKRQadxiBvuG0UbYtHDCLt6sHccsZRJ2xo8Z7Koo=,tag:4ZEroTKdRW2trH/kXq7AiA==,type:str]
+    unencrypted_regex: ^(apiVersion|metadata|kind|type)$
+    version: 3.11.0
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
     name: contact-service-secrets
     namespace: contact
 type: Opaque
@@ -45,6 +70,8 @@ spec:
       labels:
         app: contact-service
     spec:
+      imagePullSecrets:
+      - name: ghcr-pull-secret
       containers:
       - name: contact-service
         image: ghcr.io/szeigo/contact-service:1.0
