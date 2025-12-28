@@ -3,7 +3,8 @@ kind: Kustomization
 
 resources:
   - storageclass_all.yaml
-  - ../../apps
   - ../../infrastructure
+  - ../../infrastructure/envoy-gateway-proxy
+  - ../../apps
   - cert-manager-issuers-ks.yaml
   - flux-system
