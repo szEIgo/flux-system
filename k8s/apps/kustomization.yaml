@@ -8,3 +8,4 @@ resources:
   - schmidtsgarage.yaml
   - contact.yaml
   - contact-service-secret.yaml
+  - schmidtsgarage-secret.yaml
