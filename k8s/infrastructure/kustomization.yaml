@@ -3,7 +3,6 @@ kind: Kustomization
 
 resources:
   - nginx-ingress
-  - envoy-gateway
   - cert-manager
   - flux-system-secrets
   - openebs-zfs
