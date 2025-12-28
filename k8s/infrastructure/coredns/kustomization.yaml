@@ -3,3 +3,8 @@ kind: Kustomization
 
 resources:
   - coredns-configmap.yaml
+  - coredns-serviceaccount.yaml
+  - coredns-clusterrole.yaml
+  - coredns-clusterrolebinding.yaml
+  - coredns-deployment.yaml
+  - coredns-service.yaml

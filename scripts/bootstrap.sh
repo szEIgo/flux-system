@@ -23,6 +23,45 @@ if ! kubectl -n flux-system get secret sops-age >/dev/null 2>&1; then
     exit 1
 fi
 
+# Preflight: ensure CoreDNS can resolve public hosts (e.g., github.com)
+echo "Preflight: ensuring CoreDNS is installed and configured..."
+# If Deployment missing, apply full CoreDNS kustomization (SA, RBAC, Service, Deployment, ConfigMap)
+if ! kubectl -n kube-system get deploy coredns >/dev/null 2>&1; then
+    echo "CoreDNS deployment missing; applying kustomization..."
+    kubectl apply -k "$REPO_ROOT/k8s/infrastructure/coredns" || true
+else
+    echo "CoreDNS deployment present; patching ConfigMap..."
+    kubectl apply -f "$REPO_ROOT/k8s/infrastructure/coredns/coredns-configmap.yaml" || true
+    kubectl -n kube-system rollout restart deployment coredns || true
+fi
+
+# DNS health checks: internal service and external host
+echo "Preflight: checking cluster DNS (svc + external) via busybox..."
+DNS_OK=0
+for i in $(seq 1 6); do
+    # Try resolving an internal service and github.com from a short-lived pod
+    kubectl run dns-check-$RANDOM --rm -i --restart=Never --image=busybox:1.36 \
+        -- nslookup notification-controller.flux-system.svc.cluster.local >/tmp/dns_internal.$$ 2>&1 || true
+    kubectl run dns-check-$RANDOM --rm -i --restart=Never --image=busybox:1.36 \
+        -- nslookup github.com >/tmp/dns_external.$$ 2>&1 || true
+    if grep -qi 'address' /tmp/dns_internal.$$ && grep -qi 'address' /tmp/dns_external.$$; then
+        DNS_OK=1
+        echo "DNS resolution OK"
+        break
+    fi
+    echo "Attempt $i: DNS not yet healthy; retrying in 5s..."
+    sleep 5
+done
+rm -f /tmp/dns_internal.$$ /tmp/dns_external.$$ || true
+
+if [ "$DNS_OK" -ne 1 ]; then
+    echo "ERROR: Cluster DNS unhealthy. CoreDNS may be missing or misconfigured."
+    echo "- Check kube-dns service endpoints: kubectl -n kube-system get endpoints kube-dns"
+    echo "- Ensure CoreDNS pods exist: kubectl -n kube-system get pods | grep -i coredns"
+    echo "- If missing, re-enable the k3s CoreDNS addon or reinstall CoreDNS"
+    exit 1
+fi
+
 # Try to use encrypted GitHub token
 TOKEN=""
 if [ -f "$GITHUB_TOKEN_FILE" ]; then
