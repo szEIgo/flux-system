@@ -1,0 +1,17 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: contact-gateway
+  namespace: contact
+spec:
+  gatewayClassName: envoy
+  listeners:
+  - name: https
+    protocol: HTTPS
+    port: 30443
+    hostname: kontakt.norsemen.io
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: letsencrypt-tls
