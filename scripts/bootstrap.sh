@@ -35,13 +35,26 @@ else
     kubectl -n kube-system rollout restart deployment coredns || true
 fi
 
+# Wait for CoreDNS deployment to be Ready
+echo "Waiting for CoreDNS to be Ready..."
+kubectl -n kube-system rollout status deploy/coredns --timeout=120s || true
+
+# Ensure kube-dns Service has the expected clusterIP (k3s default: 10.43.0.10)
+EXPECTED_DNS_IP="10.43.0.10"
+ACTUAL_DNS_IP=$(kubectl -n kube-system get svc kube-dns -o jsonpath='{.spec.clusterIP}' 2>/dev/null || echo "")
+if [ -n "$ACTUAL_DNS_IP" ] && [ "$ACTUAL_DNS_IP" != "$EXPECTED_DNS_IP" ]; then
+    echo "kube-dns clusterIP ($ACTUAL_DNS_IP) != expected ($EXPECTED_DNS_IP); recreating Service..."
+    kubectl -n kube-system delete svc kube-dns || true
+    kubectl apply -f "$REPO_ROOT/k8s/infrastructure/coredns/coredns-service.yaml" || true
+fi
+
 # DNS health checks: internal service and external host
 echo "Preflight: checking cluster DNS (svc + external) via busybox..."
 DNS_OK=0
 for i in $(seq 1 6); do
     # Try resolving an internal service and github.com from a short-lived pod
     kubectl run dns-check-$RANDOM --rm -i --restart=Never --image=busybox:1.36 \
-        -- nslookup notification-controller.flux-system.svc.cluster.local >/tmp/dns_internal.$$ 2>&1 || true
+        -- nslookup kubernetes.default.svc.cluster.local >/tmp/dns_internal.$$ 2>&1 || true
     kubectl run dns-check-$RANDOM --rm -i --restart=Never --image=busybox:1.36 \
         -- nslookup github.com >/tmp/dns_external.$$ 2>&1 || true
     if grep -qi 'address' /tmp/dns_internal.$$ && grep -qi 'address' /tmp/dns_external.$$; then
@@ -114,7 +127,9 @@ kubectl patch kustomization flux-system -n flux-system \
 # Reconcile
 echo "Reconciling root (flux-system) and stack..."
 flux reconcile kustomization flux-system -n flux-system --with-source
-# Reconcile infra first, then gateway, then proxy, then apps
+# Reconcile stack: cert-manager -> issuers -> gateway -> proxy -> apps
+flux reconcile kustomization cert-manager -n flux-system --with-source || true
+flux reconcile kustomization cert-manager-issuers -n flux-system --with-source || true
 flux reconcile kustomization envoy-gateway -n flux-system --with-source || true
 flux reconcile kustomization envoy-gateway-proxy -n flux-system --with-source || true
 flux reconcile kustomization apps -n flux-system --with-source || true

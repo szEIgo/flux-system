@@ -14,12 +14,18 @@ if kubectl get ns flux-system >/dev/null 2>&1; then
 	kubectl -n flux-system get kustomizations.kustomize.toolkit.fluxcd.io -o name | xargs -r kubectl -n flux-system delete --wait=false || true
 fi
 
-# Remove app namespaces
-for ns in contact schmidtsgarage envoy-gateway-system cert-manager ingress-nginx openebs openebs-system zfs-localpv; do
-	if kubectl get ns "$ns" >/dev/null 2>&1; then
-		echo "Deleting namespace $ns..."
-		kubectl delete ns "$ns" --wait=false || true
-	fi
+# Remove all non-system namespaces (generic)
+echo "Deleting non-system namespaces..."
+for ns in $(kubectl get ns -o jsonpath='{.items[*].metadata.name}'); do
+	case "$ns" in
+		kube-system|kube-public|kube-node-lease|default)
+			continue
+			;;
+		*)
+			echo "Deleting namespace $ns..."
+			kubectl delete ns "$ns" --wait=false 2>/dev/null || true
+			;;
+	esac
 done
 
 # Strip finalizers from stuck resources across common groups
@@ -73,14 +79,45 @@ kubectl get clusterissuers.cert-manager.io -o name 2>/dev/null | while read -r n
 	kubectl delete "$name" --wait=false 2>/dev/null || true
 done
 
-# Remove CRDs introduced by stack (Gateway API, Envoy Gateway, cert-manager)
-echo "Removing CRDs for Gateway API, Envoy, cert-manager, OpenEBS, and Flux..."
-kubectl get crds | awk '/gateway.networking.k8s.io|envoyproxy.io|cert-manager.io|toolkit.fluxcd.io|openebs|csi.openebs.io|zfs/ {print $1}' | xargs -r kubectl delete crd || true
+# Delete CoreDNS resources we installed in kube-system
+echo "Removing vendor CoreDNS resources..."
+kubectl -n kube-system delete deploy coredns --wait=false 2>/dev/null || true
+kubectl -n kube-system delete svc kube-dns --wait=false 2>/dev/null || true
+kubectl -n kube-system delete cm coredns 2>/dev/null || true
+kubectl -n kube-system delete sa coredns 2>/dev/null || true
+kubectl delete clusterrole system:coredns 2>/dev/null || true
+kubectl delete clusterrolebinding system:coredns 2>/dev/null || true
+
+# Delete CRDs not part of k3s defaults (generic)
+echo "Removing non-default CRDs..."
+# Clear CRD finalizers first
+for crd in $(kubectl get crds -o jsonpath='{.items[*].metadata.name}'); do
+	case "$crd" in
+		addons.k3s.cattle.io|helmcharts.helm.cattle.io|helmchartconfigs.helm.cattle.io)
+			continue
+			;;
+		*)
+			kubectl patch crd "$crd" -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+			;;
+	esac
+done
+# Delete all CRDs except k3s cattle ones
+kubectl get crds | awk 'NR>1 && !/addons.k3s.cattle.io|helmcharts.helm.cattle.io|helmchartconfigs.helm.cattle.io/ {print $1}' | xargs -r kubectl delete crd || true
 
 echo "Removing StorageClasses created by GitOps (zfs-fast, zfs-slow)..."
 kubectl delete storageclass zfs-fast zfs-slow 2>/dev/null || true
 kubectl patch storageclass zfs-fast -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
 kubectl patch storageclass zfs-slow -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+
+# Generic: remove non-default StorageClasses (keep rancher local-path)
+echo "Removing non-default StorageClasses (keeping local-path)..."
+while IFS='|' read -r sc prov; do
+	if [[ "$prov" != "rancher.io/local-path" ]]; then
+		echo "Deleting StorageClass $sc (provisioner=$prov)"
+		kubectl delete storageclass "$sc" 2>/dev/null || true
+		kubectl patch storageclass "$sc" -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+	fi
+done < <(kubectl get storageclass -o jsonpath='{range .items[*]}{.metadata.name}{"|"}{.provisioner}{"\n"}{end}' 2>/dev/null)
 
 echo "Deleting OpenEBS ZFS workloads in kube-system..."
 kubectl -n kube-system delete statefulset openebs-zfs-controller --wait=false 2>/dev/null || true

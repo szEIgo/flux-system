@@ -5,7 +5,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
+  - schmidtsgarage-secret.yaml
   - schmidtsgarage.yaml
   - contact.yaml
   - contact-service-secret.yaml
-  - schmidtsgarage-secret.yaml
+  

@@ -4,9 +4,6 @@ metadata:
   name: schmidtsgarage
   namespace: envoy-gateway-system
 spec:
-  gatewayRef:
-    name: schmidtsgarage-gateway
-    namespace: schmidtsgarage
   provider:
     type: Kubernetes
     kubernetes:

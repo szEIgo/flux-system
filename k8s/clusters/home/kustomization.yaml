@@ -5,6 +5,7 @@ resources:
   - storageclass_all.yaml
   - ../../infrastructure
   - envoy-gateway-ks.yaml
+  - cert-manager-ks.yaml
   - envoy-gateway-proxy-ks.yaml
   - apps-ks.yaml
   - cert-manager-issuers-ks.yaml

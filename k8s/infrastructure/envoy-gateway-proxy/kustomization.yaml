@@ -4,4 +4,3 @@ kind: Kustomization
 resources:
   - envoyproxy.yaml
   - envoyproxy-schmidtsgarage.yaml
-  - envoyproxy-contact.yaml
