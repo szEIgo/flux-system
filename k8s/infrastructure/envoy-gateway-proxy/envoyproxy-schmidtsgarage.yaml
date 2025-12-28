@@ -1,0 +1,27 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: schmidtsgarage
+  namespace: envoy-gateway-system
+spec:
+  gatewayRef:
+    name: schmidtsgarage-gateway
+    namespace: schmidtsgarage
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: NodePort
+        externalTrafficPolicy: Local
+        patch:
+          value:
+            spec:
+              ports:
+                - name: https
+                  port: 443
+                  protocol: TCP
+                  nodePort: 30443
+      envoyDeployment:
+        pod:
+          nodeSelector:
+            kubernetes.io/hostname: mothership
