@@ -65,30 +65,6 @@ spec:
     port: 8066
     targetPort: 8066
 ---
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: contact-service
-  namespace: contact
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-spec:
-  ingressClassName: nginx
-  tls:
-  - hosts:
-    - kontakt.norsemen.io
-    secretName: letsencrypt-tls
-  rules:
-  - host: kontakt.norsemen.io
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: contact-service
-            port:
-              number: 8066
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
