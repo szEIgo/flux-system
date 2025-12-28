@@ -12,7 +12,7 @@ spec:
     kubernetes:
       envoyService:
         type: NodePort
-        externalTrafficPolicy: Local
+        externalTrafficPolicy: Cluster
         patch:
           value:
             spec:
