@@ -10,4 +10,4 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   interval: 24h
-  url: https://envoyproxy.github.io/gateway
+  url: https://charts.gateway.envoyproxy.io
