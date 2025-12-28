@@ -7,11 +7,22 @@ spec:
   provider:
     type: Kubernetes
     kubernetes:
-      service:
+      envoyService:
         type: NodePort
-        nodePorts:
-          http: 30080
-          https: 30443
-      deployment:
-        nodeSelector:
-          kubernetes.io/hostname: mothership
+        externalTrafficPolicy: Local
+        patch:
+          value:
+            spec:
+              ports:
+                - name: http
+                  port: 80
+                  protocol: TCP
+                  nodePort: 30080
+                - name: https
+                  port: 443
+                  protocol: TCP
+                  nodePort: 30443
+      envoyDeployment:
+        pod:
+          nodeSelector:
+            kubernetes.io/hostname: mothership
