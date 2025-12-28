@@ -7,5 +7,6 @@ kind: Kustomization
 resources:
   - schmidtsgarage.yaml
   - contact-service.yaml
+  - ghcr-pull-secret.yaml
   - contact-service-secret.yaml
   - ghcr-pull-secret.yaml
