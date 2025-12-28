@@ -4,7 +4,8 @@ kind: Kustomization
 resources:
   - storageclass_all.yaml
   - ../../infrastructure
-  - ../../infrastructure/envoy-gateway-proxy
-  - ../../apps
+  - envoy-gateway-ks.yaml
+  - envoy-gateway-proxy-ks.yaml
+  - apps-ks.yaml
   - cert-manager-issuers-ks.yaml
   - flux-system
