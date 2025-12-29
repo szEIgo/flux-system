@@ -1,10 +1,6 @@
-# Applications kustomization
-# Add your app manifests here
-
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  #- schmidtsgarage.yaml
-  #- contact.yaml
-  #- contact-service-secret.yaml
+  - schmidtsgarage
+  - contact-service

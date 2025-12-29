@@ -4,11 +4,11 @@ metadata:
   name: contact-gateway
   namespace: contact
 spec:
-  gatewayClassName: envoy
+  gatewayClassName: traefik
   listeners:
   - name: https
     protocol: HTTPS
-    port: 30443
+    port: 443
     hostname: kontakt.norsemen.io
     tls:
       mode: Terminate

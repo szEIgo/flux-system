@@ -10,7 +10,7 @@ echo "Tearing down GitOps stack..."
 
 # Delete Flux-managed Kustomizations to prune resources
 if kubectl get ns flux-system >/dev/null 2>&1; then
-	echo "Deleting Flux Kustomizations (envoy-gateway, envoy-gateway-proxy, apps, flux-system)..."
+	echo "Deleting Flux Kustomizations (apps, infrastructure, flux-system)..."
 	kubectl -n flux-system get kustomizations.kustomize.toolkit.fluxcd.io -o name | xargs -r kubectl -n flux-system delete --wait=false || true
 fi
 
@@ -132,24 +132,24 @@ echo "Deleting OpenEBS ZFS workloads in kube-system..."
 kubectl -n kube-system delete statefulset openebs-zfs-controller --wait=false 2>/dev/null || true
 kubectl -n kube-system delete daemonset openebs-zfs-node --wait=false 2>/dev/null || true
 
-echo "Removing ClusterRoles and ClusterRoleBindings for Flux, Envoy, cert-manager, OpenEBS..."
-kubectl get clusterrole | awk '/(^| )flux|envoy|cert-manager|openebs|zfs/ {print $1}' | xargs -r kubectl delete clusterrole || true
-kubectl get clusterrolebinding | awk '/(^| )flux|envoy|cert-manager|openebs|zfs/ {print $1}' | xargs -r kubectl delete clusterrolebinding || true
+echo "Removing ClusterRoles and ClusterRoleBindings for Flux, cert-manager, OpenEBS..."
+kubectl get clusterrole | awk '/(^| )flux|cert-manager|openebs|zfs/ {print $1}' | xargs -r kubectl delete clusterrole || true
+kubectl get clusterrolebinding | awk '/(^| )flux|cert-manager|openebs|zfs/ {print $1}' | xargs -r kubectl delete clusterrolebinding || true
 
-echo "Removing webhook configurations for Flux, cert-manager, Envoy, OpenEBS, Metallb..."
-kubectl delete mutatingwebhookconfiguration cert-manager-webhook envoy-gateway-topology-injector.envoy-gateway-system metallb-webhook-configuration 2>/dev/null || true
+echo "Removing webhook configurations for Flux, cert-manager, OpenEBS, Metallb..."
+kubectl delete mutatingwebhookconfiguration cert-manager-webhook metallb-webhook-configuration 2>/dev/null || true
 kubectl delete validatingwebhookconfiguration cert-manager-webhook metallb-webhook-configuration 2>/dev/null || true
 
 echo "Ensuring GatewayClasses CRD is removed..."
 kubectl delete crd gatewayclasses.gateway.networking.k8s.io 2>/dev/null || true
 
-echo "Removing ClusterRoles and ClusterRoleBindings for Flux, Envoy, cert-manager, OpenEBS..."
-kubectl get clusterrole | awk '/flux|envoy|cert-manager|openebs|zfs/ {print $1}' | xargs -r kubectl delete clusterrole || true
-kubectl get clusterrolebinding | awk '/flux|envoy|cert-manager|openebs|zfs/ {print $1}' | xargs -r kubectl delete clusterrolebinding || true
+echo "Removing ClusterRoles and ClusterRoleBindings for Flux, cert-manager, OpenEBS..."
+kubectl get clusterrole | awk '/flux|cert-manager|openebs|zfs/ {print $1}' | xargs -r kubectl delete clusterrole || true
+kubectl get clusterrolebinding | awk '/flux|cert-manager|openebs|zfs/ {print $1}' | xargs -r kubectl delete clusterrolebinding || true
 
-echo "Removing webhook configurations for Flux, cert-manager, Envoy, OpenEBS..."
-kubectl get mutatingwebhookconfigurations | awk '/flux|cert-manager|envoy|openebs|zfs/ {print $1}' | xargs -r kubectl delete mutatingwebhookconfiguration || true
-kubectl get validatingwebhookconfigurations | awk '/flux|cert-manager|envoy|openebs|zfs/ {print $1}' | xargs -r kubectl delete validatingwebhookconfiguration || true
+echo "Removing webhook configurations for Flux, cert-manager, OpenEBS..."
+kubectl get mutatingwebhookconfigurations | awk '/flux|cert-manager|openebs|zfs/ {print $1}' | xargs -r kubectl delete mutatingwebhookconfiguration || true
+kubectl get validatingwebhookconfigurations | awk '/flux|cert-manager|openebs|zfs/ {print $1}' | xargs -r kubectl delete validatingwebhookconfiguration || true
 
 # Final cleanup: force delete any remaining stuck/terminating pods
 echo "Force deleting any remaining stuck pods..."
@@ -179,9 +179,9 @@ kubectl get crds | head -n 20 || true
 echo "Remaining pods (non-system namespaces):"
 kubectl get pods -A | grep -vE 'kube-system|kube-public|default|kube-node-lease' || true
 echo "Remaining ClusterRoles (filtered):"
-kubectl get clusterrole | grep -E 'flux|envoy|cert-manager|openebs|zfs' || true
+kubectl get clusterrole | grep -E 'flux|cert-manager|openebs|zfs' || true
 echo "Remaining ClusterRoleBindings (filtered):"
-kubectl get clusterrolebinding | grep -E 'flux|envoy|cert-manager|openebs|zfs' || true
+kubectl get clusterrolebinding | grep -E 'flux|cert-manager|openebs|zfs' || true
 echo "Remaining webhook configurations:"
 kubectl get mutatingwebhookconfigurations || true
 kubectl get validatingwebhookconfigurations || true
