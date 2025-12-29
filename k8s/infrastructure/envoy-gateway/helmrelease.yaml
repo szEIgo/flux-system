@@ -13,6 +13,7 @@ spec:
         name: envoy-gateway
         namespace: envoy-gateway-system
   values:
-    # Install CRDs and controller
     deployOperator: true
     installCRDs: true
+    gatewayAPI:
+      enabled: true

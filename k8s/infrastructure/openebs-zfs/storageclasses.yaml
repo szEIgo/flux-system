@@ -3,7 +3,7 @@ kind: StorageClass
 metadata:
   name: zfs-fast
   annotations:
-    storageclass.kubernetes.io/is-default-class: "false"
+    storageclass.kubernetes.io/is-default-class: "true"
 provisioner: zfs.csi.openebs.io
 parameters:
   poolname: "fastPool/k3s"

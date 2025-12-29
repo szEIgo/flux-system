@@ -2,8 +2,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - nginx-ingress
+ # - nginx-ingress
   - envoy-gateway
   - cert-manager
+  - cert-manager-issuers
   - flux-system-secrets
   - openebs-zfs
