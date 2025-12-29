@@ -25,13 +25,13 @@ fi
 
 # Preflight: ensure CoreDNS can resolve public hosts (e.g., github.com)
 echo "Preflight: ensuring CoreDNS is installed and configured..."
-# If Deployment missing, apply full CoreDNS kustomization (SA, RBAC, Service, Deployment, ConfigMap)
+# If Deployment missing, apply full CoreDNS manifest
 if ! kubectl -n kube-system get deploy coredns >/dev/null 2>&1; then
-    echo "CoreDNS deployment missing; applying kustomization..."
-    kubectl apply -k "$REPO_ROOT/k8s/infrastructure/coredns" || true
+    echo "CoreDNS deployment missing; applying manifest..."
+    kubectl apply -f "$REPO_ROOT/k8s/infrastructure/coredns.yaml" || true
 else
     echo "CoreDNS deployment present; patching ConfigMap..."
-    kubectl apply -f "$REPO_ROOT/k8s/infrastructure/coredns/coredns-configmap.yaml" || true
+    kubectl apply -f "$REPO_ROOT/k8s/infrastructure/coredns.yaml" || true
     kubectl -n kube-system rollout restart deployment coredns || true
 fi
 
@@ -45,7 +45,7 @@ ACTUAL_DNS_IP=$(kubectl -n kube-system get svc kube-dns -o jsonpath='{.spec.clus
 if [ -n "$ACTUAL_DNS_IP" ] && [ "$ACTUAL_DNS_IP" != "$EXPECTED_DNS_IP" ]; then
     echo "kube-dns clusterIP ($ACTUAL_DNS_IP) != expected ($EXPECTED_DNS_IP); recreating Service..."
     kubectl -n kube-system delete svc kube-dns || true
-    kubectl apply -f "$REPO_ROOT/k8s/infrastructure/coredns/coredns-service.yaml" || true
+    kubectl apply -f "$REPO_ROOT/k8s/infrastructure/coredns.yaml" || true
 fi
 
 # DNS health checks: internal service and external host
