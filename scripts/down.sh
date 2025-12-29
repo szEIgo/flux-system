@@ -97,15 +97,6 @@ kubectl get clusterissuers.cert-manager.io -o name 2>/dev/null | while read -r n
 	kubectl delete "$name" --wait=false 2>/dev/null || true
 done
 
-# Delete CoreDNS resources we installed in kube-system
-echo "Removing vendor CoreDNS resources..."
-kubectl -n kube-system delete deploy coredns --wait=false 2>/dev/null || true
-kubectl -n kube-system delete svc kube-dns --wait=false 2>/dev/null || true
-kubectl -n kube-system delete cm coredns 2>/dev/null || true
-kubectl -n kube-system delete sa coredns 2>/dev/null || true
-kubectl delete clusterrole system:coredns 2>/dev/null || true
-kubectl delete clusterrolebinding system:coredns 2>/dev/null || true
-
 # Delete CRDs not part of k3s defaults (generic)
 echo "Removing non-default CRDs..."
 # Clear CRD finalizers first

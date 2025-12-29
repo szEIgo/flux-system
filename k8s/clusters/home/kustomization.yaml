@@ -3,6 +3,6 @@ kind: Kustomization
 
 resources:
   #- storageclass_all.yaml
-  - ../../apps
+  #- ../../apps
   - ../../infrastructure
   - flux-system
