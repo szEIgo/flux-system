@@ -81,6 +81,14 @@ if [ -f "$GITHUB_TOKEN_FILE" ]; then
     TOKEN=$(SOPS_AGE_KEY_FILE="$AGE_KEY" sops -d --extract '["github_token"]' "$GITHUB_TOKEN_FILE" 2>/dev/null || true)
 fi
 
+# If no token and not interactive, fail fast with guidance
+if [ -z "$TOKEN" ] && [ ! -t 0 ]; then
+    echo "ERROR: No GitHub token available and no interactive TTY to prompt."
+    echo "- Add an encrypted PAT: make add-gh-pat (requires SOPS/age key)"
+    echo "- Or set env GITHUB_TOKEN and re-run make up"
+    exit 1
+fi
+
 echo "Running Flux bootstrap..."
 BOOTSTRAP_LOG=$(mktemp)
 BOOTSTRAP_STATUS=0
@@ -126,6 +134,36 @@ if ! kubectl get crd gitrepositories.source.toolkit.fluxcd.io >/dev/null 2>&1; t
     echo "ERROR: Flux CRDs missing. Bootstrap likely did not install controllers."
     echo "- Check bootstrap output above and retry after fixing token/network."
     exit 1
+fi
+
+# Verify the bootstrap sync objects exist
+echo "Checking bootstrap sync objects (GitRepository/Kustomization)..."
+if ! kubectl -n flux-system get gitrepositories.source.toolkit.fluxcd.io flux-system >/dev/null 2>&1; then
+    echo "WARN: GitRepository 'flux-system' not found in namespace flux-system."
+    echo "- Attempting to apply local gotk-sync.yaml as a fallback..."
+    if kubectl apply -f "$REPO_ROOT/k8s/clusters/home/flux-system/gotk-sync.yaml"; then
+        echo "Applied gotk-sync.yaml. Re-checking GitRepository..."
+    else
+        echo "ERROR: Failed to apply gotk-sync.yaml fallback."
+        echo "- Confirm GitHub token permissions and network to GitHub."
+        exit 1
+    fi
+fi
+if ! kubectl -n flux-system get gitrepositories.source.toolkit.fluxcd.io flux-system >/dev/null 2>&1; then
+    echo "ERROR: GitRepository 'flux-system' still missing after fallback."
+    exit 1
+fi
+if ! kubectl -n flux-system get kustomizations.kustomize.toolkit.fluxcd.io flux-system >/dev/null 2>&1; then
+    echo "ERROR: Kustomization 'flux-system' not found in namespace flux-system."
+    echo "- Bootstrap may have failed to apply gotk-sync.yaml."
+    exit 1
+fi
+
+# Verify the Git credentials secret exists (for private repos)
+if ! kubectl -n flux-system get secret flux-system >/dev/null 2>&1; then
+    echo "WARN: Git credentials Secret 'flux-system' not found in namespace flux-system."
+    echo "- If your repo is private, source-controller will fail to fetch."
+    echo "- Ensure bootstrap completed successfully or create the secret manually."
 fi
 
 # Wait for GitRepository to produce an artifact
