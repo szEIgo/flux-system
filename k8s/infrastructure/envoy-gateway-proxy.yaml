@@ -1,0 +1,81 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: default
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: NodePort
+        externalTrafficPolicy: Cluster
+        patch:
+          value:
+            spec:
+              ports:
+                - name: http
+                  port: 80
+                  protocol: TCP
+                  nodePort: 30080
+                - name: https
+                  port: 443
+                  protocol: TCP
+                  nodePort: 30443
+      envoyDeployment:
+        pod:
+          nodeSelector:
+            kubernetes.io/hostname: mothership
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: contact
+  namespace: envoy-gateway-system
+spec:
+  gatewayRef:
+    name: contact-gateway
+    namespace: contact
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: NodePort
+        externalTrafficPolicy: Cluster
+        patch:
+          value:
+            spec:
+              ports:
+                - name: https
+                  port: 443
+                  protocol: TCP
+                  nodePort: 30444
+      envoyDeployment:
+        pod:
+          nodeSelector:
+            kubernetes.io/hostname: mothership
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: schmidtsgarage
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: NodePort
+        externalTrafficPolicy: Cluster
+        patch:
+          value:
+            spec:
+              ports:
+                - name: https
+                  port: 443
+                  protocol: TCP
+                  nodePort: 30443
+      envoyDeployment:
+        pod:
+          nodeSelector:
+            kubernetes.io/hostname: mothership

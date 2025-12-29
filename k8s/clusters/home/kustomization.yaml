@@ -2,11 +2,10 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - storageclass_all.yaml
-  - ../../infrastructure
-  - envoy-gateway-ks.yaml
-  - cert-manager-ks.yaml
-  - envoy-gateway-proxy-ks.yaml
-  - apps-ks.yaml
-  - cert-manager-issuers-ks.yaml
-  - flux-system
+  - ../../infrastructure/zfs-csi.yaml
+  - ../../infrastructure/coredns.yaml
+  - ../../infrastructure/cert-manager.yaml
+  - ../../infrastructure/envoy-gateway.yaml
+  - ../../infrastructure/envoy-gateway-proxy.yaml
+  - ../../secrets
+  - ../../apps

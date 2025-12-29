@@ -10,7 +10,7 @@ export GITHUB_BRANCH="${GITHUB_BRANCH:-b2b}"
 # Paths
 export FLUX_PATH="./k8s/clusters/home"
 export AGE_KEY="${HOME}/.config/sops/keys/age.key"
-export SECRETS_DIR="k8s/secrets"
+export SECRETS_DIR="k8s/infrastructure/flux-system-secrets"
 export KUSTOMIZATION_FILE="${SECRETS_DIR}/kustomization.yaml"
 
 # Sensitive files (not in config, handled by individual scripts)

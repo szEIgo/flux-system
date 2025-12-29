@@ -23,6 +23,8 @@ for ns in $(kubectl get ns -o jsonpath='{.items[*].metadata.name}'); do
 			;;
 		*)
 			echo "Deleting namespace $ns..."
+			# Force delete all pods in this namespace first
+			kubectl -n "$ns" delete pods --all --grace-period=0 --force 2>/dev/null || true
 			kubectl delete ns "$ns" --wait=false 2>/dev/null || true
 			;;
 	esac
@@ -62,6 +64,22 @@ fi
 # Uninstall Flux controllers last
 echo "Uninstalling Flux components..."
 flux uninstall --silent || true
+
+# Force delete any stuck pods in flux-system namespace
+echo "Force deleting stuck/terminating pods in flux-system..."
+if kubectl get ns flux-system >/dev/null 2>&1; then
+	# First strip finalizers from all pods
+	kubectl -n flux-system get pods -o name 2>/dev/null | while read -r pod; do
+		kubectl -n flux-system patch "$pod" -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+	done
+	# Then force delete terminating pods
+	kubectl -n flux-system get pods --field-selector=status.phase=Terminating -o name 2>/dev/null | while read -r pod; do
+		echo "Force deleting terminating pod: $pod"
+		kubectl -n flux-system delete "$pod" --grace-period=0 --force 2>/dev/null || true
+	done
+	# Also force delete all remaining flux-system pods
+	kubectl -n flux-system delete pods --all --grace-period=0 --force 2>/dev/null || true
+fi
 
 # Remove Flux namespace
 kubectl delete ns flux-system --wait=false 2>/dev/null || true
@@ -141,6 +159,27 @@ kubectl get clusterrolebinding | awk '/flux|envoy|cert-manager|openebs|zfs/ {pri
 echo "Removing webhook configurations for Flux, cert-manager, Envoy, OpenEBS..."
 kubectl get mutatingwebhookconfigurations | awk '/flux|cert-manager|envoy|openebs|zfs/ {print $1}' | xargs -r kubectl delete mutatingwebhookconfiguration || true
 kubectl get validatingwebhookconfigurations | awk '/flux|cert-manager|envoy|openebs|zfs/ {print $1}' | xargs -r kubectl delete validatingwebhookconfiguration || true
+
+# Final cleanup: force delete any remaining stuck/terminating pods
+echo "Force deleting any remaining stuck pods..."
+for ns in $(kubectl get ns -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+	case "$ns" in
+		kube-system|kube-public|kube-node-lease|default)
+			continue
+			;;
+		*)
+			# Strip finalizers from all pods in namespace
+			kubectl -n "$ns" get pods -o name 2>/dev/null | while read -r pod; do
+				kubectl -n "$ns" patch "$pod" -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+			done
+			# Force delete terminating pods
+			kubectl -n "$ns" get pods --field-selector=status.phase=Terminating -o name 2>/dev/null | while read -r pod; do
+				echo "Force deleting stuck pod: $pod in namespace $ns"
+				kubectl -n "$ns" delete "$pod" --grace-period=0 --force 2>/dev/null || true
+			done
+			;;
+	esac
+done
 
 echo "Remaining namespaces:"
 kubectl get ns || true

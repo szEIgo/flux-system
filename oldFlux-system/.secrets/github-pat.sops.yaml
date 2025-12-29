@@ -1,0 +1,16 @@
+github_token: ENC[AES256_GCM,data:QiZtOE3xlXUCMMq7n8xvYT8D89cF1GwbjQRtFtDhfKRngXUOCBZN100huRCGktLwbg2JLjBVoCy7WdRobNrrslL1PcBYiZ2isBkB5MYtRxNEeBk06HP20BU8LaU7,iv:38nljZTm5FEY5VUyq583brgP0cbtS/ExOVrRyUIs13w=,tag:V/Wvw/G3VuP3Y6hDR9yPZQ==,type:str]
+sops:
+    age:
+        - recipient: age19fmyfyqqx37raywwtlt7ynpgq7jd8dq365m79lqe7u8jy7e8kqesk0tzrp
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBBa1BBU2FUNEZQR1RkL1FF
+            QmpqYmRMQnRSREtPNFVydUFkeVMvQkVGeGh3ClMrcHlzYm1lNTFUWlJnVGJ1MXVq
+            MHlhN3paSlVGVWpHOHc0U2VrMFJRMVEKLS0tIElNc1hDSDd2VmhYN1MybXNYRTdW
+            Wm5pYXFNZG40UGYxTzVqb0lTY3ZlaTgKztbku3Yh7tTBLUTOEtHFSpvnpZGnjAwD
+            EtSDNSDeLA9A/53u7Du3HJlPxhWv9JIZmlhBhqXWdTD63BNN7vOpoA==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2025-12-17T21:53:58Z"
+    mac: ENC[AES256_GCM,data:LIm8Y/funYJiJifLemPmsfsUYEUMBIAMohNBK/DrUGlux/aeQCNzFpuPEc6cB95fH/JbINVlqUVKjfQ36vXx2mvMh6ILyhIYhuJYu0oopqFKz4QftH6POlGVeolGkyrg8mwD7yi4TDnRSlvKbeN9t3kcH9CA3fHSLgQYVjLPErI=,iv:bqDDRi5Bir4A/VJizofohs6Qb9Ig2GlBfy46BeF6qGU=,tag:Ik+Erw2zUykj3PIxZCSV5w==,type:str]
+    unencrypted_regex: ^(apiVersion|metadata|kind|type)$
+    version: 3.11.0
