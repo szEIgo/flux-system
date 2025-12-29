@@ -5,7 +5,7 @@
 # GitHub repository settings
 export GITHUB_OWNER="${GITHUB_OWNER:-szeigo}"
 export GITHUB_REPO="${GITHUB_REPO:-flux-system}"
-export GITHUB_BRANCH="${GITHUB_BRANCH:-b2b}"
+export GITHUB_BRANCH="${GITHUB_BRANCH:-nginx}"
 
 # Paths
 export FLUX_PATH="./k8s/clusters/home"
