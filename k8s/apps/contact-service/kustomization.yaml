@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - contact-service-secret.yaml
+  - ghcr-pull-secret.yaml
   - contact-service.yaml
   - contact-httproute.yaml
   #- contact-certificate.yaml
