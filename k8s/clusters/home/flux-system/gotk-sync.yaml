@@ -121,6 +121,7 @@ spec:
       labels:
         k8s-app: kube-dns
     spec:
+      dnsPolicy: Default
       priorityClassName: system-cluster-critical
       serviceAccountName: coredns
       tolerations:
