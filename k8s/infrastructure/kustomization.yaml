@@ -3,7 +3,5 @@ kind: Kustomization
 
 resources:
   - openebs-zfs
-  - cert-manager
-  - cert-manager-issuers
   - flux-system-secrets
   

@@ -3,5 +3,5 @@ kind: Kustomization
 
 resources:
   - flux-system
-  - ../../infrastructure
-  #- ../../apps
+  - infra.yaml
+  - app-sync.yaml
