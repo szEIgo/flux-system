@@ -81,24 +81,51 @@ if [ -f "$GITHUB_TOKEN_FILE" ]; then
     TOKEN=$(SOPS_AGE_KEY_FILE="$AGE_KEY" sops -d --extract '["github_token"]' "$GITHUB_TOKEN_FILE" 2>/dev/null || true)
 fi
 
-# Bootstrap
+echo "Running Flux bootstrap..."
+BOOTSTRAP_LOG=$(mktemp)
+BOOTSTRAP_STATUS=0
 if [ -n "$TOKEN" ]; then
-        echo "Using encrypted GitHub token from $GITHUB_TOKEN_FILE"
-        GITHUB_TOKEN="$TOKEN" flux bootstrap github \
-                --owner="$GITHUB_OWNER" \
-                --repository="$GITHUB_REPO" \
-                --branch="$GITHUB_BRANCH" \
-                --path="$FLUX_PATH" \
-                --personal \
-                --token-auth || true
+    echo "Using encrypted GitHub token from $GITHUB_TOKEN_FILE"
+    if ! GITHUB_TOKEN="$TOKEN" flux bootstrap github \
+        --owner="$GITHUB_OWNER" \
+        --repository="$GITHUB_REPO" \
+        --branch="$GITHUB_BRANCH" \
+        --path="$FLUX_PATH" \
+        --personal \
+        --token-auth | tee "$BOOTSTRAP_LOG"; then
+        BOOTSTRAP_STATUS=$?
+    fi
 else
-        echo "No encrypted token found; will prompt interactively"
-        flux bootstrap github \
-                --owner="$GITHUB_OWNER" \
-                --repository="$GITHUB_REPO" \
-                --branch="$GITHUB_BRANCH" \
-                --path="$FLUX_PATH" \
-                --personal || true
+    echo "No encrypted token found; will prompt interactively"
+    if ! flux bootstrap github \
+        --owner="$GITHUB_OWNER" \
+        --repository="$GITHUB_REPO" \
+        --branch="$GITHUB_BRANCH" \
+        --path="$FLUX_PATH" \
+        --personal | tee "$BOOTSTRAP_LOG"; then
+        BOOTSTRAP_STATUS=$?
+    fi
+fi
+
+# Fail fast on bootstrap errors
+if [ "$BOOTSTRAP_STATUS" -ne 0 ]; then
+    echo "ERROR: Flux bootstrap failed (exit $BOOTSTRAP_STATUS)."
+    echo "Bootstrap output:" && sed -n '1,200p' "$BOOTSTRAP_LOG" || true
+    echo "\nTroubleshooting tips:"
+    echo "- Verify PAT decryption: SOPS_AGE_KEY_FILE=$AGE_KEY sops -d --extract '[\"github_token\"]' $GITHUB_TOKEN_FILE"
+    echo "- Confirm GitHub settings: owner=$GITHUB_OWNER repo=$GITHUB_REPO branch=$GITHUB_BRANCH path=$FLUX_PATH"
+    echo "- Ensure network/DNS to api.github.com works (we already checked github.com DNS)."
+    rm -f "$BOOTSTRAP_LOG" || true
+    exit $BOOTSTRAP_STATUS
+fi
+rm -f "$BOOTSTRAP_LOG" || true
+
+# Verify Flux CRDs exist before waiting (guards against silent bootstrap failures)
+echo "Checking Flux CRDs exist..."
+if ! kubectl get crd gitrepositories.source.toolkit.fluxcd.io >/dev/null 2>&1; then
+    echo "ERROR: Flux CRDs missing. Bootstrap likely did not install controllers."
+    echo "- Check bootstrap output above and retry after fixing token/network."
+    exit 1
 fi
 
 # Wait for GitRepository to produce an artifact
@@ -121,8 +148,12 @@ fi
 
 # Configure SOPS decryption
 echo "Configuring SOPS decryption on flux-system Kustomization..."
-kubectl patch kustomization flux-system -n flux-system \
-    --type merge -p '{"spec":{"decryption":{"provider":"sops","secretRef":{"name":"sops-age"}}}}' || true
+if ! kubectl patch kustomization flux-system -n flux-system \
+    --type merge -p '{"spec":{"decryption":{"provider":"sops","secretRef":{"name":"sops-age"}}}}'; then
+    echo "WARN: Could not patch flux-system Kustomization for SOPS decryption."
+    echo "- This can happen if Kustomization 'flux-system' has not been created yet."
+    echo "- Will continue; decryption may be configured by manifests in repo."
+fi
 
 # Reconcile
 echo "Reconciling root (flux-system) and stack..."
