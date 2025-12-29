@@ -20,7 +20,7 @@ spec:
         app: contact-service
     spec:
       imagePullSecrets:
-      - name: ghcr-pull-secret
+      - name: contact-service-secrets
       containers:
       - name: contact-service
         image: ghcr.io/szeigo/contact-service:1.0
