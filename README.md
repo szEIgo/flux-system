@@ -1,74 +1,44 @@
-# Flux GitOps - Minimal k3s Setup
+# Flux GitOps (k3s)
 
-Declarative k3s cluster with Flux CD, SOPS encryption, nginx-ingress, and cert-manager.
+stack
+- k3s
+- traefik
+- gateway-api
+- flux
+- sops
+- cert-manager
+- openebs-zfs
 
-## Quick Start
-
+start
 ```bash
-make init      # Initialize SOPS encryption
-make up        # Bootstrap Flux from GitHub
-make status    # Check cluster health
+make init
+GITHUB_TOKEN=... make up
+make status
 ```
 
-## Commands
+cfg
+- scripts/config.sh
 
-Run `make help` or `make` to see all available commands.
-
-## Configuration
-
-Edit `scripts/config.sh` for GitHub settings and paths.
-
-## Structure
-
+tree
 ```
 k8s/
-├── clusters/home/           # Cluster entry point (Flux bootstrap path)
-├── infrastructure/          # Shared infrastructure (nginx, cert-manager)
-└── apps/                    # Your applications (create this)
+  clusters/home/
+  infrastructure/
+  apps/
 ```
 
-## Deploy Your First App
+secrets
+- gh pat
+  - GITHUB_TOKEN=... make add-gh-pat
+  - cat token.txt | make add-gh-pat ARGS=--stdin
+- k8s secret
+  - SECRET_NAME=n SECRET_KEY=k SECRET_VALUE=v make add-secret
+  - cat value.txt | make add-secret ARGS="--name n --key k --stdin"
 
-1. Create `k8s/apps/kustomization.yaml`:
-```yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - myapp.yaml
-```
-
-2. Create your app manifest in `k8s/apps/myapp.yaml`
-
-3. Reference apps in `k8s/clusters/home/kustomization.yaml`:
-```yaml
-resources:
-  - storageclass_all.yaml
-  - ../../infrastructure
-  - ../../apps
-  - cert-manager-issuers-ks.yaml
-  - flux-system
-```
-
-4. Commit and push - Flux reconciles automatically.
-
-## Network Configuration
-
-- **Ingress**: NodePort 30080 (HTTP) / 30443 (HTTPS)
-- **Host routing**: Configure your reverse proxy to forward `*.yourdomain` to these ports
-- See `docs/nginx-*.conf` for example reverse proxy configs
-
-## Secrets
-
+ops
 ```bash
-make add-secret   # Create encrypted secret
-```
-
-Secrets are stored encrypted in `k8s/infrastructure/flux-system-secrets/`
-
-## Troubleshooting
-
-```bash
-make status       # Full cluster status
-make logs         # Stream Flux logs
-make reconcile    # Force reconciliation
+make reconcile
+make logs
+make down
+make down ARGS="--destroy --yes"
 ```

@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# DESCRIPTION: Tail kustomize-controller logs (follow mode)
+# DESCRIPTION: logs
 # USAGE: make logs
 # CATEGORY: operations
-# DETAILS: Streams kustomize-controller logs for debugging
+# DETAILS: kustomize
 
 set -euo pipefail
 
-echo "=== Flux Logs (kustomize-controller) ==="
-kubectl logs -n flux-system deployment/kustomize-controller --tail=50
+kubectl logs -n flux-system deployment/kustomize-controller -f --tail=100

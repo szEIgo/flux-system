@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# DESCRIPTION: Rotate age encryption key and re-encrypt all secrets
+# DESCRIPTION: rotate
 # USAGE: make rotate-keys
 # CATEGORY: maintenance
-# DETAILS: Generates new age key, updates .sops.yaml, and re-encrypts all secrets
+# DETAILS: sops
 
 set -euo pipefail
 

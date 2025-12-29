@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
-# DESCRIPTION: Tear down GitOps-managed workloads (safe by default)
-# USAGE: make down [--destroy]
+# DESCRIPTION: teardown
+# USAGE: make down ARGS="--destroy --yes"
 # CATEGORY: maintenance
-# DETAILS: Default mode suspends Flux reconciliation and deletes non-system namespaces while KEEPING Flux and CRDs.
-#          Use --destroy to perform a full destructive teardown (uninstalls Flux, deletes CRDs, cluster roles, etc).
+# DETAILS: safe, destroy
 
 set -uo pipefail
 
 MODE="safe"
+YES=0
 if [[ "${1:-}" == "--destroy" ]]; then
 	MODE="destroy"
+	shift
+fi
+
+if [[ "${1:-}" == "--yes" ]]; then
+	YES=1
 	shift
 fi
 
@@ -45,10 +50,8 @@ safe_down() {
 }
 
 destroy_all() {
-	echo "DESTRUCTIVE MODE: this will uninstall Flux and remove many CRDs/cluster-scoped resources."
-	read -r -p "Type DESTROY to confirm: " confirm
-	if [[ "$confirm" != "DESTROY" ]]; then
-		echo "Aborted."
+	if [[ "$YES" -ne 1 ]]; then
+		echo "ERR: --yes"
 		exit 1
 	fi
 

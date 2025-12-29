@@ -1,25 +1,40 @@
 #!/usr/bin/env bash
-# DESCRIPTION: Store encrypted GitHub Personal Access Token
+# DESCRIPTION: gh pat
 # USAGE: make add-gh-pat
 # CATEGORY: secrets
-# DETAILS: Encrypts and stores GitHub PAT for automated bootstrap (optional)
+# DETAILS: sops file
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-GITHUB_TOKEN_FILE="$REPO_ROOT/.secrets/github-pat.sops.yaml"
+source "$SCRIPT_DIR/config.sh"
 
-echo "Store encrypted GitHub PAT..."
-mkdir -p "$REPO_ROOT/.secrets"
+usage() {
+	echo "gh pat"
+	echo "env: GITHUB_TOKEN"
+	echo "opt: --stdin"
+}
 
-read -sp "GitHub PAT (will be stored encrypted): " token
-echo
+GITHUB_TOKEN_FILE="$REPO_ROOT/$GITHUB_TOKEN_SOPS_FILE"
 
-echo "github_token: $token" > /tmp/github-pat.yaml
-sops -e /tmp/github-pat.yaml > "$GITHUB_TOKEN_FILE"
-rm -f /tmp/github-pat.yaml
+mkdir -p "$(dirname "$GITHUB_TOKEN_FILE")"
 
-echo "✓ Encrypted token saved to $GITHUB_TOKEN_FILE"
-echo "Next: git add $GITHUB_TOKEN_FILE && git commit -m 'Add encrypted GH PAT' && git push"
+TOKEN="${GITHUB_TOKEN:-}"
+if [[ "${1:-}" == "--stdin" ]]; then
+	TOKEN="$(cat)"
+fi
+
+if [ -z "$TOKEN" ]; then
+	usage
+	exit 1
+fi
+
+tmpfile="$(mktemp)"
+trap 'rm -f "$tmpfile"' EXIT
+
+printf '%s\n' "github_token: $TOKEN" > "$tmpfile"
+sops -e "$tmpfile" > "$GITHUB_TOKEN_FILE"
+
+echo "ok"

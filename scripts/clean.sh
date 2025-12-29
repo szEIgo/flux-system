@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# DESCRIPTION: Remove sops-age secret from cluster
+# DESCRIPTION: sops-age rm
 # USAGE: make clean
 # CATEGORY: maintenance
-# DETAILS: Deletes the sops-age Secret from flux-system namespace
+# DETAILS: cluster
 
 set -euo pipefail
 

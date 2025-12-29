@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# DESCRIPTION: Bootstrap Flux from GitHub repository
+# DESCRIPTION: flux bootstrap
 # USAGE: make up
 # CATEGORY: setup
-# DETAILS: Checks for sops-age secret, uses encrypted GitHub token if available,
-#          and patches Kustomization for SOPS decryption
+# DETAILS: github
 
 set -euo pipefail
 
@@ -13,13 +12,19 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Source configuration
 source "$SCRIPT_DIR/config.sh"
 
-GITHUB_TOKEN_FILE="$REPO_ROOT/.secrets/github-pat.sops.yaml"
+GITHUB_TOKEN_FILE="$REPO_ROOT/$GITHUB_TOKEN_SOPS_FILE"
 
-echo "Bootstrapping Flux from GitHub..."
+usage() {
+    echo "flux bootstrap"
+    echo "req: GITHUB_TOKEN"
+    echo "alt: make add-gh-pat"
+}
+
+echo "bootstrap"
 
 # Verify sops-age secret exists
-if ! kubectl -n flux-system get secret sops-age >/dev/null 2>&1; then
-    echo "ERROR: sops-age secret missing. Run 'make init' first."
+if ! kubectl -n "$FLUX_NAMESPACE" get secret sops-age >/dev/null 2>&1; then
+    echo "ERR: sops-age"
     exit 1
 fi
 
@@ -29,33 +34,30 @@ if [ -f "$GITHUB_TOKEN_FILE" ]; then
     TOKEN=$(SOPS_AGE_KEY_FILE="$AGE_KEY" sops -d --extract '["github_token"]' "$GITHUB_TOKEN_FILE" 2>/dev/null || true)
 fi
 
-# Bootstrap
-if [ -n "$TOKEN" ]; then
-    echo "Using encrypted GitHub token from $GITHUB_TOKEN_FILE"
-    GITHUB_TOKEN="$TOKEN" flux bootstrap github \
-        --owner="$GITHUB_OWNER" \
-        --repository="$GITHUB_REPO" \
-        --branch="$GITHUB_BRANCH" \
-        --path="$FLUX_PATH" \
-        --personal \
-        --token-auth
-else
-    echo "No encrypted token found; will prompt interactively"
-    flux bootstrap github \
-        --owner="$GITHUB_OWNER" \
-        --repository="$GITHUB_REPO" \
-        --branch="$GITHUB_BRANCH" \
-        --path="$FLUX_PATH" \
-        --personal
+if [ -z "$TOKEN" ] && [ -n "${GITHUB_TOKEN:-}" ]; then
+    TOKEN="$GITHUB_TOKEN"
 fi
 
+if [ -z "$TOKEN" ]; then
+    usage
+    exit 1
+fi
+
+GITHUB_TOKEN="$TOKEN" flux bootstrap github \
+	--owner="$GITHUB_OWNER" \
+	--repository="$GITHUB_REPO" \
+	--branch="$GITHUB_BRANCH" \
+	--path="$FLUX_PATH" \
+	--personal \
+	--token-auth
+
 # Configure SOPS decryption
-echo "Configuring SOPS decryption on flux-system Kustomization..."
-kubectl patch kustomization flux-system -n flux-system \
+echo "decrypt"
+kubectl patch kustomization flux-system -n "$FLUX_NAMESPACE" \
     --type merge -p '{"spec":{"decryption":{"provider":"sops","secretRef":{"name":"sops-age"}}}}'
 
 # Reconcile
-echo "Reconciling..."
+echo "reconcile"
 flux reconcile kustomization flux-system --with-source
 
-echo "✓ Flux bootstrapped with SOPS"
+echo "ok"

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# DESCRIPTION: Force Flux to reconcile immediately
+# DESCRIPTION: reconcile
 # USAGE: make reconcile
 # CATEGORY: operations
-# DETAILS: Triggers immediate reconciliation of flux-system Kustomization
+# DETAILS: flux
 
 set -euo pipefail
 

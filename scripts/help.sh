@@ -7,9 +7,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "Flux GitOps with SOPS"
-echo ""
-echo "All automation logic is in scripts/"
+echo "flux"
+echo "sops"
 echo ""
 
 # Find all scripts and extract their metadata
@@ -63,12 +62,11 @@ print_category() {
 }
 
 # Print categories in order
-print_category "setup" "Setup & Bootstrap"
-print_category "secrets" "Secrets Management"
-print_category "operations" "Day-to-Day Operations"
-print_category "maintenance" "Maintenance"
-print_category "info" "Information"
+print_category "setup" "setup"
+print_category "secrets" "secrets"
+print_category "operations" "ops"
+print_category "maintenance" "maint"
+print_category "info" "info"
 
-echo "Quick Start: make init -> make add-gh-pat -> make up"
-echo "Configuration: scripts/config.sh"
-echo ""
+echo "cfg: scripts/config.sh"
+echo "args: make <t> ARGS=\"...\""
