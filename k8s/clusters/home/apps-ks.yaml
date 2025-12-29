@@ -16,3 +16,4 @@ spec:
       name: sops-age
   dependsOn:
   - name: envoy-gateway-proxy
+  - name: cert-manager-issuers

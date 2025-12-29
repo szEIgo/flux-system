@@ -3,13 +3,16 @@ kind: Namespace
 metadata:
   name: schmidtsgarage
 ---
+# PersistentVolumeClaim for schmidtsgarage website content
+# NOTE: Change storageClassName to 'local-path' for fresh clusters without ZFS
+# ZFS pools (fastPool/k3s) must exist before using zfs-fast storage class
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: schmidtsgarage-www
   namespace: schmidtsgarage
 spec:
-  storageClassName: zfs-fast
+  storageClassName: local-path  # Use 'zfs-fast' if ZFS is configured
   accessModes:
     - ReadWriteOnce
   resources:

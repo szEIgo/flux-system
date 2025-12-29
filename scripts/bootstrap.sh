@@ -196,11 +196,31 @@ fi
 # Reconcile
 echo "Reconciling root (flux-system) and stack..."
 flux reconcile kustomization flux-system -n flux-system --with-source
-# Reconcile stack: cert-manager -> issuers -> gateway -> proxy -> apps
-flux reconcile kustomization cert-manager -n flux-system --with-source || true
-flux reconcile kustomization cert-manager-issuers -n flux-system --with-source || true
-flux reconcile kustomization envoy-gateway -n flux-system --with-source || true
-flux reconcile kustomization envoy-gateway-proxy -n flux-system --with-source || true
-flux reconcile kustomization apps -n flux-system --with-source || true
+
+# Wait for Kustomizations to be created by flux-system before reconciling them
+echo "Waiting for Kustomizations to be created..."
+for ks in cert-manager cert-manager-issuers envoy-gateway envoy-gateway-proxy apps; do
+    for i in $(seq 1 30); do
+        if kubectl -n flux-system get kustomization "$ks" >/dev/null 2>&1; then
+            echo "Kustomization $ks created"
+            break
+        fi
+        if [ "$i" -eq 30 ]; then
+            echo "WARN: Kustomization $ks not found after 30s. Skipping reconcile for $ks."
+            continue 2
+        fi
+        sleep 1
+    done
+done
+
+# Reconcile stack in dependency order: cert-manager -> issuers -> gateway -> proxy -> apps
+echo "Reconciling infrastructure and apps in dependency order..."
+flux reconcile kustomization cert-manager -n flux-system --with-source || echo "WARN: cert-manager reconcile failed (may still be initializing)"
+sleep 5  # Give cert-manager time to deploy before issuers
+flux reconcile kustomization cert-manager-issuers -n flux-system --with-source || echo "WARN: cert-manager-issuers reconcile failed"
+flux reconcile kustomization envoy-gateway -n flux-system --with-source || echo "WARN: envoy-gateway reconcile failed"
+sleep 3  # Give envoy-gateway time before proxy
+flux reconcile kustomization envoy-gateway-proxy -n flux-system --with-source || echo "WARN: envoy-gateway-proxy reconcile failed"
+flux reconcile kustomization apps -n flux-system --with-source || echo "WARN: apps reconcile failed"
 
 echo "✓ Flux bootstrapped and stack reconciled"

@@ -1,9 +1,12 @@
-.PHONY: help init up add-secret add-gh-pat rotate-keys reconcile status logs down clean
+.PHONY: help init up add-secret add-gh-pat rotate-keys reconcile status logs down clean preflight
 
 SCRIPTS_DIR := ./scripts
 
 help:
 	@$(SCRIPTS_DIR)/help.sh
+
+preflight:
+	@$(SCRIPTS_DIR)/preflight.sh
 
 init:
 	@$(SCRIPTS_DIR)/init.sh
