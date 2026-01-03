@@ -124,7 +124,7 @@ spec:
   tls:
   - hosts:
     - jonathan.szigethy.dk
-    secretName: jonathan-letsencrypt-tls
+    secretName: letsencrypt-tls
   rules:
   - host: jonathan.szigethy.dk
     http:

@@ -124,7 +124,7 @@ spec:
   tls:
   - hosts:
     - teknik.norsemen.io
-    secretName: teknik-letsencrypt-tls
+    secretName: letsencrypt-tls
   rules:
   - host: teknik.norsemen.io
     http:
