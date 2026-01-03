@@ -104,3 +104,28 @@ spec:
             name: norsemen
             port:
               number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: norsemen-public
+  namespace: norsemen
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: traefik
+  tls:
+  - hosts:
+    - norsemen.io
+    secretName: letsencrypt-tls
+  rules:
+  - host: norsemen.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: teknik
+            port:
+              number: 80
