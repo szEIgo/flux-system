@@ -184,7 +184,7 @@ destroy_all() {
 
 	echo "Removing webhook configurations for Flux, cert-manager, OpenEBS, Metallb..."
 	kubectl delete mutatingwebhookconfiguration cert-manager-webhook metallb-webhook-configuration 2>/dev/null || true
-	kubectl delete validatingwebhookconfiguration cert-manager-webhook metallb-webhook-configuration 2>/dev/null || true
+	kubectl delete validatingwebhookconfiguration cert-manager-webhook metallb-webhook-configuration 2>/dev/null || 	ue
 
 	echo "Ensuring GatewayClasses CRD is removed..."
 	kubectl delete crd gatewayclasses.gateway.networking.k8s.io 2>/dev/null || true
