@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: jonathan
+  name: teknik
 
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: jonathan-www
-  namespace: jonathan
+  name: teknik-www
+  namespace: teknik
 spec:
   storageClassName: zfs-fast
   accessModes:
@@ -21,17 +21,17 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jonathan
-  namespace: jonathan
+  name: teknik
+  namespace: teknik
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jonathan
+      app: teknik
   template:
     metadata:
       labels:
-        app: jonathan
+        app: teknik
     spec:
       initContainers:
       - name: content-sync
@@ -40,7 +40,7 @@ spec:
         - name: GITHUB_TOKEN
           valueFrom:
             secretKeyRef:
-              name: jonathan-github-token
+              name: teknik-github-token
               key: token
         command: ["/bin/sh","-c"]
         args:
@@ -53,14 +53,14 @@ spec:
               git -C "$target" reset --hard origin/main || true
             else
               git config --global advice.detachedHead false
-              repo=https://$GITHUB_TOKEN@github.com/szEIgo/jonathan.git
+              repo=https://$GITHUB_TOKEN@github.com/szEIgo/teknik.git
               git clone --depth 1 "$repo" "$target"
             fi
         volumeMounts:
         - name: www
           mountPath: /data/www
       containers:
-      - name: jonathan
+      - name: teknik
         image: nginx:alpine
         ports:
         - containerPort: 80
@@ -70,17 +70,17 @@ spec:
       volumes:
       - name: www
         persistentVolumeClaim:
-          claimName: jonathan-www
+          claimName: teknik-www
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: jonathan
-  namespace: jonathan
+  name: teknik
+  namespace: teknik
 spec:
   selector:
-    app: jonathan
+    app: teknik
   ports:
   - port: 80
     targetPort: 80
@@ -89,25 +89,25 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: jonathan
-  namespace: jonathan
+  name: teknik
+  namespace: teknik
   annotations:
     cert-manager.io/cluster-issuer: "selfsigned"
 spec:
   ingressClassName: traefik
   tls:
   - hosts:
-    - jonathan.szigethy.lan
-    secretName: jonathan-tls
+    - teknik.szigethy.lan
+    secretName: teknik-tls
   rules:
-  - host: jonathan.szigethy.lan
+  - host: teknik.szigethy.lan
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: jonathan
+            name: teknik
             port:
               number: 80
 
@@ -115,24 +115,24 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: jonathan-public
-  namespace: jonathan
+  name: teknik-public
+  namespace: teknik
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   ingressClassName: traefik
   tls:
   - hosts:
-    - jonathan.szigethy.lan
-    secretName: jonathan-letsencrypt-tls
+    - teknik.norsemen.io
+    secretName: teknik-letsencrypt-tls
   rules:
-  - host: jonathan.szigethy.dk
+  - host: teknik.norsemen.io
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: jonathan
+            name: teknik
             port:
               number: 80
