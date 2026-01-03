@@ -126,6 +126,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: teknik
+            name: norsemen
             port:
               number: 80
