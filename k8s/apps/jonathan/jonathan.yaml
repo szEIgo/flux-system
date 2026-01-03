@@ -126,7 +126,7 @@ spec:
     - jonathan.szigethy.lan
     secretName: letsencrypt-tls
   rules:
-  - host: jonathan.szigethy.lan
+  - host: jonathan.szigethy.dk
     http:
       paths:
       - path: /
