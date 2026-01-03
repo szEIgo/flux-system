@@ -25,6 +25,8 @@ metadata:
   namespace: teknik
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: teknik
