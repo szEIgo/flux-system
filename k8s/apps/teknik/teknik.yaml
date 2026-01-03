@@ -53,7 +53,7 @@ spec:
               git -C "$target" reset --hard origin/main || true
             else
               git config --global advice.detachedHead false
-              repo=https://$GITHUB_TOKEN@github.com/szEIgo/teknik.git
+              repo=https://$GITHUB_TOKEN@github.com/szEIgo/norsemen_teknik.git
               git clone --depth 1 "$repo" "$target"
             fi
         volumeMounts:
