@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - schmidtsgarage
   - contact-service
+  - jonathan
